@@ -1,5 +1,6 @@
 import argparse
 
+import orchpy
 import orchpy.services as services
 import orchpy.worker as worker
 
