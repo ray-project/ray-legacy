@@ -31,7 +31,7 @@ def download_and_parse_tar(tar_path):
     content = tar.extractfile(member)
     print "decompressing", content.name
     img = PIL.Image.open(content)
-    rgbimg = Image.new("RGB", img.size)
+    rgbimg = PIL.Image.new("RGB", img.size)
     rgbimg.paste(img)
     img = rgbimg.resize((256, 256), PIL.Image.ANTIALIAS)
     tensors.append(np.array(img).reshape(1, 256, 256, 3))
