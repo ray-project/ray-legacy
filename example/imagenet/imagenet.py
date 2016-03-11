@@ -2,6 +2,7 @@ import argparse
 import boto3
 import tarfile, io
 import numpy as np
+import PIL.Image
 
 import orchpy
 import orchpy.services as services
@@ -24,13 +25,14 @@ def download_and_parse_tar(tar_path):
     chunk = response['Body'].read(1024 * 8)
   output.seek(0) # go to the beginning of the .tar file
   tar = tarfile.open(mode= "r", fileobj=output)
+  tensors = []
   for member in tar.getmembers():
     filename = member.path # in a format like 'n02099601_3085.JPEG'
     content = tar.extractfile(member)
-    out = open(os.path.join(directory, filename), 'w')
-    out.write(content.read())
-    out.close()
-  return np.zeros((10, 10))
+    print "decompressing", content.name
+    img = PIL.Image.open(content)
+    tensors.append(np.array(img).reshape(1, 256, 256, 3))
+  return np.concatenate(tensors)
 
 if __name__ == '__main__':
   args = parser.parse_args()
