@@ -170,13 +170,43 @@ int serialize(PyObject* val, Obj* obj) {
     for (int i = 0; i < PyArray_NDIM(array); ++i) {
       data->add_shape(PyArray_DIM(array, i));
     }
-    if (PyArray_ISFLOAT(array)) {
-      double* buffer = (double*) PyArray_DATA(array);
-      for (npy_intp i = 0; i < size; ++i) {
-        data->add_double_data(buffer[i]);
-      }
+    int typ = PyArray_TYPE(array);
+    data->set_dtype(typ);
+    switch (typ) {
+      case NPY_FLOAT: {
+          npy_float* buffer = (npy_float*) PyArray_DATA(array);
+          for (npy_intp i = 0; i < size; ++i) {
+            data->add_float_data(buffer[i]);
+          }
+        }
+        break;
+      case NPY_DOUBLE: {
+          npy_double* buffer = (npy_double*) PyArray_DATA(array);
+          for (npy_intp i = 0; i < size; ++i) {
+            data->add_double_data(buffer[i]);
+          }
+        }
+        break;
+      case NPY_INT8: {
+          npy_int8* buffer = (npy_int8*) PyArray_DATA(array);
+          for (npy_intp i = 0; i < size; ++i) {
+            data->add_int_data(buffer[i]);
+          }
+        }
+        break;
+      case NPY_UINT8: {
+          npy_uint8* buffer = (npy_uint8*) PyArray_DATA(array);
+          for (npy_intp i = 0; i < size; ++i) {
+            data->add_uint_data(buffer[i]);
+          }
+        }
+        break;
+      default:
+        PyErr_SetString(OrchPyError, "serialization: numpy datatype not know");
+        return -1;
     }
   } else {
+    PyErr_SetString(OrchPyError, "serialization: type not know");
     return -1;
   }
   return 0;
@@ -201,21 +231,59 @@ PyObject* deserialize(const Obj& obj) {
     return PyString_FromStringAndSize(buffer, length);
   } else if (obj.has_array_data()) {
     const Array& array = obj.array_data();
-    if (array.double_data_size() > 0) { // TODO: this is not quite right
+    std::vector<npy_intp> dims;
+    for (int i = 0; i < array.shape_size(); ++i) {
+      dims.push_back(array.shape(i));
+    }
+    PyArrayObject* pyarray = (PyArrayObject*)PyArray_SimpleNew(array.shape_size(), &dims[0], array.dtype());
+    if (array.double_data_size() > 0) { // TODO: handle empty array
       npy_intp size = array.double_data_size();
-      std::vector<npy_intp> dims;
-      for (int i = 0; i < array.shape_size(); ++i) {
-        dims.push_back(array.shape(i));
-      }
-      PyArrayObject* pyarray = (PyArrayObject*)PyArray_SimpleNew(array.shape_size(), &dims[0], NPY_DOUBLE);
-      double* buffer = (double*) PyArray_DATA(pyarray);
+      npy_double* buffer = (npy_double*) PyArray_DATA(pyarray);
       for (npy_intp i = 0; i < size; ++i) {
         buffer[i] = array.double_data(i);
       }
-      return (PyObject*)pyarray;
+    } else if (array.float_data_size() > 0) {
+      npy_intp size = array.float_data_size();
+      npy_float* buffer = (npy_float*) PyArray_DATA(pyarray);
+      for (npy_intp i = 0; i < size; ++i) {
+        buffer[i] = array.float_data(i);
+      }
+    } else if (array.int_data_size() > 0) {
+      npy_intp size = array.int_data_size();
+      switch (array.dtype()) {
+        case NPY_INT8: {
+            npy_int8* buffer = (npy_int8*) PyArray_DATA(pyarray);
+            for (npy_intp i = 0; i < size; ++i) {
+              buffer[i] = array.int_data(i);
+            }
+          }
+          break;
+        default:
+          PyErr_SetString(OrchPyError, "deserialization: internal error (array type not implemented)");
+          return NULL;
+      }
+    } else if (array.uint_data_size() > 0) {
+      npy_intp size = array.uint_data_size();
+      switch (array.dtype()) {
+        case NPY_UINT8: {
+            npy_uint8* buffer = (npy_uint8*) PyArray_DATA(pyarray);
+            for (npy_intp i = 0; i < size; ++i) {
+              buffer[i] = array.uint_data(i);
+            }
+          }
+          break;
+        default:
+          PyErr_SetString(OrchPyError, "deserialization: internal error (array type not implemented)");
+          return NULL;
+      }
+    } else {
+      PyErr_SetString(OrchPyError, "deserialization: internal error (array type not implemented)");
+      return NULL;
     }
+    return (PyObject*) pyarray;
   } else {
-    std::cout << "don't have object" << std::endl;
+    PyErr_SetString(OrchPyError, "deserialization: internal error (type not implemented)");
+    return NULL;
   }
 }
 
@@ -226,7 +294,6 @@ PyObject* serialize_object(PyObject* self, PyObject* args) {
     return NULL;
   }
   if (serialize(pyval, obj) != 0) {
-    PyErr_SetString(OrchPyError, "serialization: type not know"); // TODO: put a more expressive error message here
     return NULL;
   }
   return PyCapsule_New(static_cast<void*>(obj), "obj", NULL);

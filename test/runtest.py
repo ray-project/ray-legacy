@@ -52,14 +52,22 @@ class SerializationTest(unittest.TestCase):
     result = orchpy.lib.deserialize_object(serialized)
     self.assertEqual(data, result)
 
+  def numpyTypeTest(self, typ):
+    a = np.random.randint(0, 10, size=(100, 100)).astype(typ)
+    b = orchpy.lib.serialize_object(a)
+    c = orchpy.lib.deserialize_object(b)
+    self.assertTrue((a == c).all())
+
   def testSerialize(self):
     data = [1, "hello", 3.0]
     self.roundTripTest(data)
 
-    a = np.zeros((100, 100))
-    res = orchpy.lib.serialize_object(a)
-    b = orchpy.lib.deserialize_object(res)
-    self.assertTrue((a == b).all())
+    self.numpyTypeTest('int8')
+    self.numpyTypeTest('uint8')
+    self.numpyTypeTest('int16')
+    self.numpyTypeTest('int32')
+    self.numpyTypeTest('float32')
+    self.numpyTypeTest('float64')
 
 class OrchPyLibTest(unittest.TestCase):
 
