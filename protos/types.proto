@@ -48,4 +48,5 @@ message Array {
   repeated float float_data = 4;
   repeated sint64 int_data = 5;
   repeated uint64 uint_data = 6;
+  repeated uint64 objref_data = 7;
 }

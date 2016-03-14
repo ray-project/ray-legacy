@@ -19,6 +19,18 @@ typedef struct {
     ObjRef val;
 } PyObjRef;
 
+static int PyObjRef_compare(PyObject* a, PyObject* b) {
+  PyObjRef* A = (PyObjRef*) a;
+  PyObjRef* B = (PyObjRef*) b;
+  if (A->val < B->val) {
+    return -1;
+  }
+  if (A->val > B->val) {
+    return 1;
+  }
+  return 0;
+}
+
 static void PyObjRef_dealloc(PyObjRef *self) {
   self->ob_type->tp_free((PyObject*) self);
 }
@@ -53,7 +65,7 @@ static PyTypeObject PyObjRefType = {
   0,                         /* tp_print */
   0,                         /* tp_getattr */
   0,                         /* tp_setattr */
-  0,                         /* tp_compare */
+  PyObjRef_compare,          /* tp_compare */
   0,                         /* tp_repr */
   0,                         /* tp_as_number */
   0,                         /* tp_as_sequence */
@@ -132,7 +144,7 @@ int PyObjectToObjRef(PyObject* object, ObjRef *objref) {
     *objref = ((PyObjRef*) object)->val;
     return 1;
   } else {
-    PyErr_SetString(PyExc_TypeError, "must be a 'worker' capsule");
+    PyErr_SetString(PyExc_TypeError, "must be an object reference");
     return 0;
   }
 }
@@ -199,6 +211,23 @@ int serialize(PyObject* val, Obj* obj) {
           for (npy_intp i = 0; i < size; ++i) {
             data->add_uint_data(buffer[i]);
           }
+        }
+        break;
+      case NPY_OBJECT: {
+          PyArrayIterObject* iter = (PyArrayIterObject*)PyArray_IterNew((PyObject*)array);
+          while (PyArray_ITER_NOTDONE(iter)) {
+            PyObject** item = (PyObject**)PyArray_ITER_DATA(iter);
+            ObjRef objref;
+            if (PyObject_IsInstance(*item, (PyObject*)&PyObjRefType)) {
+              objref = ((PyObjRef*)(*item))->val;
+            } else {
+              PyErr_SetString(PyExc_TypeError, "must be an object reference"); // TODO: improve error message
+              return -1;
+            }
+            data->add_objref_data(objref);
+            PyArray_ITER_NEXT(iter);
+          }
+          Py_XDECREF(iter);
         }
         break;
       default:
@@ -275,6 +304,12 @@ PyObject* deserialize(const Obj& obj) {
         default:
           PyErr_SetString(OrchPyError, "deserialization: internal error (array type not implemented)");
           return NULL;
+      }
+    } else if (array.objref_data_size() > 0) {
+      npy_intp size = array.objref_data_size();
+      PyObject** buffer = (PyObject**) PyArray_DATA(pyarray);
+      for (npy_intp i = 0; i < size; ++i) {
+        buffer[i] = make_pyobjref(array.objref_data(i));
       }
     } else {
       PyErr_SetString(OrchPyError, "deserialization: internal error (array type not implemented)");
