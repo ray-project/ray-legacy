@@ -74,6 +74,12 @@ class SerializationTest(unittest.TestCase):
     result = orchpy.lib.deserialize_object(capsule)
     self.assertTrue((a == result).all())
 
+    import IPython
+    IPython.embed()
+    b = np.random.randint(0, 10, size=(100, 100)).astype('float32')
+    capsule = orchpy.lib.object_to_arrow(a)
+    orchpy.lib.arrow_to_object(capsule)
+
 class OrchPyLibTest(unittest.TestCase):
 
     def testOrchPyLib(self):

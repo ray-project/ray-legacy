@@ -37,6 +37,7 @@ struct shared_object {
 
 class ObjStoreService final : public ObjStore::Service {
 public:
+  // FIXME: Set up the queues
   ObjStoreService(const std::string& objstore_address, std::shared_ptr<Channel> scheduler_channel);
   ~ObjStoreService();
 
@@ -48,6 +49,8 @@ private:
   void allocate_memory(ObjRef objref, size_t size);
   // check if we already connected to the other objstore, if yes, return reference to connection, otherwise connect
   ObjStore::Stub& get_objstore_stub(const std::string& objstore_address);
+  //
+  void process_request();
 
   std::vector<std::string> memory_names_;
   std::unordered_map<ObjRef, shared_object> memory_;
@@ -57,6 +60,23 @@ private:
   std::mutex objstores_lock_;
   std::unique_ptr<Scheduler::Stub> scheduler_stub_;
   ObjStoreId objstoreid_; // id of this objectstore in the scheduler object store table
+
+  // new fields:
+  std::priority_queue<std::string> segment_names_;
+  std::unordered_map<std::string, std::unique_ptr<managed_shared_memory> > segments_;
+  std::unordered_map<ObjRef, std::pair<> >
+  message_queue recv_queue_;
+  std::unordered_map<std::string, message_queue> send_queues_;
 };
+
+void ObjStoreService::process_request() {
+  ObjRequest request;
+  while (true) {
+    recv_queue_.receive(&request, sizeof(ObjRequest), 0);
+    if (request.alloc) {
+      
+    }
+  }
+}
 
 #endif

@@ -5,10 +5,14 @@
 #include <Python.h>
 #include <structmember.h>
 #include <numpy/arrayobject.h>
+#include <arrow/api.h>
 #include <iostream>
 
 #include "types.pb.h"
 #include "worker.h"
+
+// TODO: move to header
+#include "orchserialize.cc"
 
 extern "C" {
 
@@ -334,6 +338,39 @@ PyObject* serialize_object(PyObject* self, PyObject* args) {
   return PyCapsule_New(static_cast<void*>(obj), "obj", NULL);
 }
 
+// TODO: For now, we create a new memory pool, but that will have to change (it needs to be created by the object store)
+PyObject* object_to_arrow(PyObject* self, PyObject* args) {
+  PyObject* value;
+  if (!PyArg_ParseTuple(args, "O", &value)) {
+    return NULL;
+  }
+  arrow::MemoryPool* pool = arrow::GetDefaultMemoryPool();
+  if (!PyArray_Check(value)) {
+    PyErr_SetString(PyExc_TypeError, "only support arrays at this point");
+    return NULL;
+  }
+  if (!PyArray_Check(value)) {
+    ORCH_LOG(ORCH_FATAL, "not an array");
+  }
+  PyArrayObject* array = (PyArrayObject*) value;
+  std::unique_ptr<arrow::PrimitiveArray> result = serialize_array(array, pool);
+  return PyCapsule_New(static_cast<void*>(result.release()), "arrow", NULL);
+}
+
+PyObject* arrow_to_object(PyObject* self, PyObject* args) {
+  PyObject* capsule;
+  if (!PyArg_ParseTuple(args, "O", &capsule)) {
+    return NULL;
+  }
+  if (PyCapsule_IsValid(capsule, "arrow")) {
+    arrow::PrimitiveArray* array = static_cast<arrow::PrimitiveArray*>(PyCapsule_GetPointer(capsule, "arrow"));
+    return deserialize_array(array);
+  } else {
+    PyErr_SetString(PyExc_TypeError, "argument must be an 'arrow' capsule");
+    return 0;
+  }
+}
+
 PyObject* deserialize_object(PyObject* self, PyObject* args) {
   Obj* obj;
   if (!PyArg_ParseTuple(args, "O&", &PyObjectToObj, &obj)) {
@@ -507,6 +544,8 @@ PyObject* start_worker_service(PyObject* self, PyObject* args) {
 static PyMethodDef OrchPyLibMethods[] = {
  { "serialize_object", serialize_object, METH_VARARGS, "serialize an object to protocol buffers" },
  { "deserialize_object", deserialize_object, METH_VARARGS, "deserialize an object from protocol buffers" },
+ { "object_to_arrow", object_to_arrow, METH_VARARGS, "convert an object to arrow data format"},
+ { "arrow_to_object", arrow_to_object, METH_VARARGS, "convert an object from arrow data format"},
  { "serialize_call", serialize_call, METH_VARARGS, "serialize a call to protocol buffers" },
  { "deserialize_call", deserialize_call, METH_VARARGS, "deserialize a call from protocol buffers" },
  { "create_worker", create_worker, METH_VARARGS, "connect to the scheduler and the object store" },

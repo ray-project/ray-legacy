@@ -79,5 +79,6 @@ endif()
 add_executable(objstore src/objstore.cc ${GENERATED_PROTOBUF_FILES})
 add_executable(scheduler src/scheduler.cc ${GENERATED_PROTOBUF_FILES})
 add_library(orchpylib SHARED src/orchpylib.cc src/worker.cc ${GENERATED_PROTOBUF_FILES})
+target_link_libraries(orchpylib arrow)
 
 install(TARGETS objstore scheduler orchpylib DESTINATION ${CMAKE_SOURCE_DIR}/lib/orchpy/orchpy)

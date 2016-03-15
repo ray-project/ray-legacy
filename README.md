@@ -29,3 +29,11 @@ Orchestra is a distributed execution framework with a Python-like programming mo
 9. `cd ~/orch/test`
 10. `bash gen-python-code.sh`
 11. `python runtest.py`
+
+**Prerequisites**
+
+```
+sudo apt-get install python python-dev python-numpy libboost-all-dev python-pip ipython
+sudo pip install six --upgrade
+sudo pip install setuptools subprocess32 typing grpcio boto3
+```
