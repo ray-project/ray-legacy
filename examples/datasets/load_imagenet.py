@@ -1,5 +1,9 @@
 import argparse
 import orchpy
+
+import arrays.single as single
+import arrays.dist as dist
+
 import datasets.imagenet as imagenet
 import orchpy.worker as worker
 
@@ -12,4 +16,6 @@ if __name__ == '__main__':
   args = parser.parse_args()
   worker.connect(args.scheduler_address, args.objstore_address, args.worker_address)
   orchpy.register_module(imagenet)
+  orchpy.register_module(single)
+  orchpy.register_module(dist)
   worker.main_loop()
