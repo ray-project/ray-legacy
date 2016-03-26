@@ -1,5 +1,6 @@
 import argparse
 import orchpy
+import cProfile
 
 import arrays.single as single
 import arrays.dist as dist
@@ -18,4 +19,5 @@ if __name__ == '__main__':
   orchpy.register_module(imagenet)
   orchpy.register_module(single)
   orchpy.register_module(dist)
-  worker.main_loop()
+  # worker.main_loop()
+  cProfile.run('worker.main_loop()', 'profile-' + args.worker_address)
