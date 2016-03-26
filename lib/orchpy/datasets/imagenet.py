@@ -33,7 +33,7 @@ def download_and_parse_tar(tar_path):
     tensors.append(np.array(img).reshape(1, 256, 256, 3))
   return np.concatenate(tensors)
 
-@op.distributed([List[str]], [DistArray])
+@op.distributed([List[str]], [dist.DistArray])
 def load_images_from_tars(tar_paths):
   objrefs = []
   for tar_path in tar_paths:
