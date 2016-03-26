@@ -60,17 +60,25 @@ def push(value, worker=global_worker):
   object_capsule = serialization.serialize(value)
   return orchpy.lib.push_object(worker.handle, object_capsule)
 
-def main_loop(worker=global_worker):
+def main_loop_step(worker):
+  call = orchpy.lib.wait_for_next_task(worker.handle)
+  func_name, args, return_objrefs = orchpy.lib.deserialize_call(call)
+  arguments = get_arguments_for_execution(worker.functions[func_name], args, worker) # get args from objstore
+  outputs = worker.functions[func_name].executor(arguments) # execute the function
+  store_outputs_in_objstore(return_objrefs, outputs, worker) # store output in local object store
+  orchpy.lib.notify_task_completed(worker.handle) # notify the scheduler that the task has completed
+
+def main_loop(worker=global_worker, profile_filename=None):
   if not worker.connected:
     raise Exception("Worker is attempting to enter main_loop but has not been connected yet.")
   orchpy.lib.start_worker_service(worker.handle)
   while True:
-    call = orchpy.lib.wait_for_next_task(worker.handle)
-    func_name, args, return_objrefs = orchpy.lib.deserialize_call(call)
-    arguments = get_arguments_for_execution(worker.functions[func_name], args, worker) # get args from objstore
-    outputs = worker.functions[func_name].executor(arguments) # execute the function
-    store_outputs_in_objstore(return_objrefs, outputs, worker) # store output in local object store
-    orchpy.lib.notify_task_completed(worker.handle) # notify the scheduler that the task has completed
+    if profile_filename != None:
+      import cProfile
+      cProfile.run('main_loop_step(worker)', profile_filename)
+    else:
+      main_loop_step(worker)
+
 
 def distributed(arg_types, return_types, worker=global_worker):
   def distributed_decorator(func):

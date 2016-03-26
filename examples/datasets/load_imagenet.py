@@ -20,4 +20,4 @@ if __name__ == '__main__':
   orchpy.register_module(single)
   orchpy.register_module(dist)
   # worker.main_loop()
-  cProfile.run('worker.main_loop()', 'profile-' + args.worker_address)
+  worker.main_loop(profile_filename='profile-'+args.worker_address)
