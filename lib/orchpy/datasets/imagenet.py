@@ -39,6 +39,6 @@ def load_images_from_tars(tar_paths):
   objrefs = []
   for tar_path in tar_paths:
     objrefs.append(download_and_parse_tar(tar_path))
-  shapes = orchpy.pull(dist.shape(np.array(objrefs)))
+  shapes = op.pull(dist.shape(np.array(objrefs)))
   print "shapes ", shapes
   return dist.DistArray()
