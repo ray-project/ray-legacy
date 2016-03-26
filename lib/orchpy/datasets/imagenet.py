@@ -1,5 +1,6 @@
 import argparse
 import boto3
+from typing import List
 import tarfile, io
 import numpy as np
 import PIL.Image
