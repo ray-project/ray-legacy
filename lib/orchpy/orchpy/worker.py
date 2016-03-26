@@ -75,7 +75,7 @@ def main_loop(worker=global_worker, profile_filename=None):
   while True:
     if profile_filename != None:
       import cProfile
-      cProfile.run('main_loop_step(worker)', profile_filename)
+      cProfile.runctx('main_loop_step(worker)', None, locals(), filename=profile_filename)
     else:
       main_loop_step(worker)
 
