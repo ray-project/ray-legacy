@@ -42,3 +42,16 @@ def load_images_from_tars(tar_paths):
   shapes = op.pull(dist.shape(np.array(objrefs)))
   print "shapes ", shapes
   return np.array(objrefs)
+
+@op.distributed([np.ndarray], [np.ndarray])
+def single_mean_image(images):
+  return images.sum(axis=0)
+
+@op.distributed([np.ndarray], [np.ndarray])
+def mean_image(images):
+  mean_image_refs = [single_mean_image(image) for image in images]
+  mean_images = [op.pull(image) for image in mean_image_refs]
+  result = np.zeros_like(mean_images[0])
+  for i in range(len(mean_images)):
+    result += mean_images[i]
+  return result
