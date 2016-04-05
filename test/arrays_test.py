@@ -163,7 +163,7 @@ class ArraysDistTest(unittest.TestCase):
     services.start_worker(test_path, address(IP_ADDRESS, scheduler_port), address(IP_ADDRESS, objstore_port), address(IP_ADDRESS, worker3_port))
     services.start_worker(test_path, address(IP_ADDRESS, scheduler_port), address(IP_ADDRESS, objstore_port), address(IP_ADDRESS, worker4_port))
 
-    time.sleep(0.2)
+    time.sleep(0.3)
 
     x = dist.zeros([9, 25, 51], "float")
     self.assertTrue(np.alltrue(orchpy.pull(dist.assemble(x)) == np.zeros([9, 25, 51])))
