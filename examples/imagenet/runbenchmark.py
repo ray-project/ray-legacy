@@ -1,9 +1,18 @@
+import orchpy as op
 import orchpy.services as services
 import imagenet
 import benchmark
+import os
+import time
+import IPython
 
+test_dir = os.path.dirname(os.path.abspath(__file__))
 test_path = os.path.join(test_dir, "benchmark.py")
-services.start_cluster(num_workers=1, worker_path=test_path)
+services.start_cluster(num_workers=10, worker_path=test_path)
+
+time.sleep(1)
+
+op.connect("127.0.0.1:10001", "127.0.0.1:20001", "127.0.0.1:11111")
 
 images = [
   "ILSVRC2012_img_val/val.000.tar",
@@ -18,5 +27,12 @@ images = [
   "ILSVRC2012_img_val/val.009.tar"
 ]
 
-a = time.time(); orchpy.pull(imagenet.load_images_from_tars(images)); b = time.time() - a
-print "time to load images is", b
+data = op.pull(imagenet.load_images_from_tars(images))
+a = time.time(); op.pull(imagenet.mean_image(data)); b = time.time() - a
+
+# print "time to load images is", b
+
+import IPython
+IPython.embed()
+
+

@@ -15,7 +15,7 @@ class Worker(object):
 
   def put_object(self, objref, value):
     """Put `value` in the local object store with objref `objref`. This assumes that the value for `objref` has not yet been placed in the local object store."""
-    if type(value) == np.ndarray:
+    if type(value) == np.ndarray and not (value.dtype == np.dtype("object")):
       orchpy.lib.put_arrow(self.handle, objref, value)
     else:
       object_capsule = serialization.serialize(value)
@@ -24,10 +24,12 @@ class Worker(object):
   def get_object(self, objref):
     """Return the value from the local object store for objref `objref`. This will block until the value for `objref` has been written to the local object store."""
     if orchpy.lib.is_arrow(self.handle, objref):
-      return orchpy.lib.get_arrow(self.handle, objref)
-    else:
-      object_capsule = orchpy.lib.get_object(self.handle, objref)
-      return serialization.deserialize(object_capsule)
+      try:
+        return orchpy.lib.get_arrow(self.handle, objref)
+      except:
+        pass
+    object_capsule = orchpy.lib.get_object(self.handle, objref)
+    return serialization.deserialize(object_capsule)
 
   def register_function(self, function):
     """Notify the scheduler that this worker can execute the function with name `func_name`. Store the function `function` locally."""
