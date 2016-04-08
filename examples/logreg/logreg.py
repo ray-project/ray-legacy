@@ -29,8 +29,7 @@ def random_onehot(num_data, num_classes):
   return data
 
 @op.distributed([np.ndarray, np.ndarray, np.ndarray, np.ndarray], [np.ndarray, np.ndarray])
-def train(W_new, b_new, X_data, y_data):
-  for
+def step(W_new, b_new, X_data, y_data):
   W.assign(Wnew)
   b.assign(bnew)
   sess.run(train_step, feed_dict={x: Xdata, y_: ydata})
