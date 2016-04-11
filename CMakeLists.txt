@@ -79,6 +79,7 @@ endif()
 add_executable(objstore src/objstore.cc src/ipc.cc ${GENERATED_PROTOBUF_FILES})
 target_link_libraries(objstore arrow)
 add_executable(scheduler src/scheduler.cc ${GENERATED_PROTOBUF_FILES})
+target_link_libraries(scheduler dl)
 add_library(orchpylib SHARED src/orchpylib.cc src/worker.cc src/ipc.cc src/serialize.cc ${GENERATED_PROTOBUF_FILES})
 target_link_libraries(orchpylib arrow)
 

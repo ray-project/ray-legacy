@@ -49,8 +49,10 @@ public:
 
   // ask an object store to send object to another objectstore
   void deliver_object(ObjRef objref, ObjStoreId from, ObjStoreId to);
+  // satisfy pull requests from the pull queue
+  void perform_pulls();
   // assign a task to a worker
-  void schedule();
+  void schedule_tasks();
   // execute a task on a worker and ship required object references
   void submit_task(std::unique_ptr<Call> call, WorkerId workerid);
   // checks if the dependencies of the task are met

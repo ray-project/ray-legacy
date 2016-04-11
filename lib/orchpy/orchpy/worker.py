@@ -86,10 +86,10 @@ def distributed(arg_types, return_types, worker=global_worker):
   def distributed_decorator(func):
     def func_executor(arguments):
       """This is what gets executed remotely on a worker after a distributed function is scheduled by the scheduler."""
-      print "Calling function {} with arguments {}".format(func.__name__, arguments)
+      # print "Calling function {} with arguments {}".format(func.__name__, arguments)
       result = func(*arguments)
       check_return_values(func_call, result) # throws an exception if result is invalid
-      print "Finished executing function {} with arguments {}".format(func.__name__, arguments)
+      # print "Finished executing function {} with arguments {}".format(func.__name__, arguments)
       return result
     def func_call(*args):
       """This is what gets run immediately when a worker calls a distributed function."""
@@ -165,9 +165,9 @@ def get_arguments_for_execution(function, args, worker=global_worker):
 
     if type(arg) == orchpy.lib.ObjRef:
       # get the object from the local object store
-      print "Getting argument {} for function {}.".format(i, function.__name__)
+      # print "Getting argument {} for function {}.".format(i, function.__name__)
       argument = worker.get_object(arg)
-      print "Successfully retrieved argument {} for function {}.".format(i, function.__name__)
+      # print "Successfully retrieved argument {} for function {}.".format(i, function.__name__)
     else:
       # pass the argument by value
       argument = arg

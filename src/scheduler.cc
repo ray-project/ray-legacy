@@ -2,6 +2,11 @@
 #include <thread>
 #include <chrono>
 
+// for the gprof exit hook:
+#include <dlfcn.h>
+#include <stdio.h>
+#include <unistd.h>
+
 #include "scheduler.h"
 
 Status SchedulerService::RemoteCall(ServerContext* context, const RemoteCallRequest* request, RemoteCallReply* reply) {
@@ -26,7 +31,7 @@ Status SchedulerService::RemoteCall(ServerContext* context, const RemoteCallRequ
   task_queue_.emplace_back(std::move(task));
   task_queue_lock_.unlock();
 
-  schedule();
+  schedule_tasks();
   return Status::OK;
 }
 
@@ -34,7 +39,6 @@ Status SchedulerService::PushObj(ServerContext* context, const PushObjRequest* r
   ObjRef objref = register_new_object();
   ObjStoreId objstoreid = get_store(request->workerid());
   reply->set_objref(objref);
-  schedule();
   return Status::OK;
 }
 
@@ -52,7 +56,7 @@ Status SchedulerService::PullObj(ServerContext* context, const PullObjRequest* r
   pull_queue_.push_back(std::make_pair(request->workerid(), objref));
   pull_queue_lock_.unlock();
 
-  schedule();
+  perform_pulls();
   return Status::OK;
 }
 
@@ -72,21 +76,21 @@ Status SchedulerService::RegisterWorker(ServerContext* context, const RegisterWo
   WorkerId workerid = register_worker(request->worker_address(), request->objstore_address());
   ORCH_LOG(ORCH_INFO, "registered worker with workerid " << workerid);
   reply->set_workerid(workerid);
-  schedule();
+  schedule_tasks();
   return Status::OK;
 }
 
 Status SchedulerService::RegisterFunction(ServerContext* context, const RegisterFunctionRequest* request, AckReply* reply) {
   ORCH_LOG(ORCH_INFO, "register function " << request->fnname() <<  " from workerid " << request->workerid());
   register_function(request->fnname(), request->workerid(), request->num_return_vals());
-  schedule();
+  schedule_tasks();
   return Status::OK;
 }
 
 Status SchedulerService::ObjReady(ServerContext* context, const ObjReadyRequest* request, AckReply* reply) {
   ORCH_LOG(ORCH_VERBOSE, "object " << request->objref() << " ready on store " << request->objstoreid());
   add_location(request->objref(), request->objstoreid());
-  schedule();
+  perform_pulls();
   return Status::OK;
 }
 
@@ -96,7 +100,7 @@ Status SchedulerService::WorkerReady(ServerContext* context, const WorkerReadyRe
     std::lock_guard<std::mutex> lock(avail_workers_lock_);
     avail_workers_.push_back(request->workerid());
   }
-  schedule();
+  schedule_tasks();
   return Status::OK;
 }
 
@@ -118,54 +122,56 @@ void SchedulerService::deliver_object(ObjRef objref, ObjStoreId from, ObjStoreId
   objstores_[from].objstore_stub->DeliverObj(&context, request, &reply);
 }
 
-void SchedulerService::schedule() {
-  // TODO: don't recheck if nothing changed
-  {
-    std::lock_guard<std::mutex> objtable_lock(objtable_lock_);
-    std::lock_guard<std::mutex> pull_queue_lock(pull_queue_lock_);
-    // Complete all pull tasks that can be completed.
-    for (int i = 0; i < pull_queue_.size(); ++i) {
-      const std::pair<WorkerId, ObjRef>& pull = pull_queue_[i];
-      WorkerId workerid = pull.first;
-      ObjRef objref = pull.second;
-      if (objtable_[objref].size() > 0) {
-        if (!std::binary_search(objtable_[objref].begin(), objtable_[objref].end(), get_store(workerid))) {
-          // The worker's local object store does not already contain objref, so ship
-          // it there from an object store that does have it.
-          ObjStoreId objstoreid = pick_objstore(objref);
-          deliver_object(objref, objstoreid, get_store(workerid));
-        }
-        // Remove the pull task from the queue
-        std::swap(pull_queue_[i], pull_queue_[pull_queue_.size() - 1]);
-        pull_queue_.pop_back();
+void SchedulerService::perform_pulls() {
+  std::lock_guard<std::mutex> objtable_lock(objtable_lock_);
+  std::lock_guard<std::mutex> pull_queue_lock(pull_queue_lock_);
+  // Complete all pull tasks that can be completed.
+  for (int i = 0; i < pull_queue_.size(); ++i) {
+    const std::pair<WorkerId, ObjRef>& pull = pull_queue_[i];
+    WorkerId workerid = pull.first;
+    ObjRef objref = pull.second;
+    if (objtable_[objref].size() > 0) {
+      if (!std::binary_search(objtable_[objref].begin(), objtable_[objref].end(), get_store(workerid))) {
+        // The worker's local object store does not already contain objref, so ship
+        // it there from an object store that does have it.
+        ObjStoreId objstoreid = pick_objstore(objref);
+        deliver_object(objref, objstoreid, get_store(workerid));
+      }
+      // Remove the pull task from the queue
+      std::swap(pull_queue_[i], pull_queue_[pull_queue_.size() - 1]);
+      pull_queue_.pop_back();
+      i -= 1;
+    }
+  }
+}
+
+void SchedulerService::schedule_tasks() {
+  auto t1 = std::chrono::high_resolution_clock::now();
+  std::lock_guard<std::mutex> fntable_lock(fntable_lock_);
+  std::lock_guard<std::mutex> avail_workers_lock(avail_workers_lock_);
+  std::lock_guard<std::mutex> task_queue_lock(task_queue_lock_);
+  for (int i = 0; i < avail_workers_.size(); ++i) {
+    // Submit all tasks whose arguments are ready.
+    WorkerId workerid = avail_workers_[i];
+    for (auto it = task_queue_.begin(); it != task_queue_.end(); ++it) {
+      // The use of erase(it) below invalidates the iterator, but we
+      // immediately break out of the inner loop, so the iterator is not used
+      // after the erase
+      const Call& task = *(*it);
+      auto& workers = fntable_[task.name()].workers();
+      if (std::binary_search(workers.begin(), workers.end(), workerid) && can_run(task)) {
+        submit_task(std::move(*it), workerid);
+        task_queue_.erase(it);
+        std::swap(avail_workers_[i], avail_workers_[avail_workers_.size() - 1]);
+        avail_workers_.pop_back();
         i -= 1;
+        break;
       }
     }
   }
-  {
-    std::lock_guard<std::mutex> fntable_lock(fntable_lock_);
-    std::lock_guard<std::mutex> avail_workers_lock(avail_workers_lock_);
-    std::lock_guard<std::mutex> task_queue_lock(task_queue_lock_);
-    for (int i = 0; i < avail_workers_.size(); ++i) {
-      // Submit all tasks whose arguments are ready.
-      WorkerId workerid = avail_workers_[i];
-      for (auto it = task_queue_.begin(); it != task_queue_.end(); ++it) {
-        // The use of erase(it) below invalidates the iterator, but we
-        // immediately break out of the inner loop, so the iterator is not used
-        // after the erase
-        const Call& task = *(*it);
-        auto& workers = fntable_[task.name()].workers();
-        if (std::binary_search(workers.begin(), workers.end(), workerid) && can_run(task)) {
-          submit_task(std::move(*it), workerid);
-          task_queue_.erase(it);
-          std::swap(avail_workers_[i], avail_workers_[avail_workers_.size() - 1]);
-          avail_workers_.pop_back();
-          i -= 1;
-          break;
-        }
-      }
-    }
-  }
+  auto t2 = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double, std::milli> fp_ms = t2 - t1;
+  std::cout << "scheduling loop took " << fp_ms.count() << " ms" << std::endl;
 }
 
 void SchedulerService::submit_task(std::unique_ptr<Call> call, WorkerId workerid) {
@@ -303,7 +309,19 @@ void start_scheduler_service(const char* server_address) {
   server->Wait();
 }
 
+void exit_hook(int sig)
+{
+  fprintf(stderr, "Exiting on SIGUSR1\n");
+  void (*_mcleanup)(void);
+  _mcleanup = (void (*)(void))dlsym(RTLD_DEFAULT, "_mcleanup");
+  if (_mcleanup == NULL)
+       fprintf(stderr, "Unable to find gprof exit hook\n");
+  else _mcleanup();
+  _exit(0);
+}
+
 int main(int argc, char** argv) {
+  signal(SIGUSR1, exit_hook);
   if (argc != 2)
     return 1;
   start_scheduler_service(argv[1]);
