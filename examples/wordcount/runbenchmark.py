@@ -8,13 +8,16 @@ import IPython
 
 test_dir = os.path.dirname(os.path.abspath(__file__))
 test_path = os.path.join(test_dir, "benchmark.py")
-services.start_cluster(num_workers=4, worker_path=test_path)
+services.start_cluster(num_workers=10, worker_path=test_path)
+
+# services.start_cluster(num_workers=16, worker_path="benchmark.py")
 
 time.sleep(1)
 
 op.connect("127.0.0.1:10001", "127.0.0.1:20001", "127.0.0.1:11111")
 
-basedir = "/home/pcmoritz/wordcount/"
+basedir = "/home/ubuntu/wordcount/"
+# basedir = "/home/pcmoritz/wordcount/"
 
 books = {
   "War and Peace": basedir + "pg2600.txt",
@@ -30,7 +33,7 @@ books = {
 
 urls = books.values()
 
-# urls = urls + urls + urls + urls
+# urls = urls + urls + urls + urls + urls + urls + urls + urls
 
 urls = 34 * [urls[0]]
 
@@ -62,7 +65,7 @@ IPython.embed()
 load = [wordcount.load_textfile(url) for url in urls]
 content_refs, size_refs = zip(*load)
 sizes = [op.pull(size) for size in size_refs]
-res = wordcount.split_partitions(sizes, 4)
+res = wordcount.split_partitions(sizes, 8)
 
 textfiles = [wordcount.load_textfile(url) for url in urls]
 
@@ -106,3 +109,5 @@ a = time.time(); d = map_reduce2(*pulled_textfiles); b = time.time() - a
 # print "time to load images is", b
 
 a = time.time(); objrefs = [wordcount.map_reduce(*[content_refs[i] for i in res[j]]) for j in range(2)]; op.pull(wordcount.sum_by_key_return_len(*objrefs)); b = time.time() - a
+
+a = time.time(); objrefs = [wordcount.map_reduce(*[content_refs[i] for i in res[j]]) for j in range(4)]; [op.pull(objref) for objref in objrefs]; b = time.time() - a

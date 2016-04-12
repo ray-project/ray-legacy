@@ -4,8 +4,9 @@ from collections import Counter
 from collections import defaultdict
 import orchpy as op
 import time
+import numpy as np
 
-def split_partitions(sizes, num_partitions):
+def split_into_partitions(sizes, num_partitions):
   total_size = sum(sizes)
   partition_size = (total_size + num_partitions - 1) // num_partitions
   perm = sorted(range(len(sizes)), key=lambda k: sizes[k])
@@ -26,6 +27,48 @@ def split_partitions(sizes, num_partitions):
   result.append(head)
   return result
 
+def count_words_local(data):
+  c = Counter()
+  for s in data:
+    c.update(s.split())
+  return c
+
+def test(num_reducers, d):
+  partitions = [{} for i in range(num_reducers)]
+  for key, val in d.iteritems():
+    partitions[hash(key) % num_reducers][key] = val
+  return np.array([op.push(partition) for partition in partitions])
+
+@op.distributed([int, str, str, None], [np.ndarray])
+def map_and_split(num_reducers, *data):
+  result = count_words_local(data)
+  partitions = [{} for i in range(num_reducers)]
+  for key, val in result.iteritems():
+    partitions[hash(key) % num_reducers][key] = val
+  return np.array([op.push(partition) for partition in partitions])
+
+@op.distributed([dict, None], [dict])
+def do_reduce(*dicts):
+  result = defaultdict(int)
+  for d in dicts:
+    d_get = d.get
+    for key in d.keys():
+      result[key] += d_get(key)
+  return result
+
+@op.distributed([int, int, list], [dict])
+def mapreduce(num_mappers, num_reducers, urls):
+  data = [load_textfile(url) for url in urls]
+  content_refs, size_refs = zip(*data)
+  sizes = [op.pull(size) for size in size_refs]
+  partitions = split_into_partitions(sizes, num_mappers)
+  map_results = [[] for i in range(num_mappers)]
+  for (i, partition) in enumerate(partitions):
+    map_results[i] = op.pull(map_and_split(num_reducers, *[content_refs[j] for j in partition]))
+  result = {}
+  for i in range(num_mappers):
+    result.update(op.pull(do_reduce(*[map_results[i][j] for j in range(num_reducers)])))
+  return result
 
 # files = books.values()
 
