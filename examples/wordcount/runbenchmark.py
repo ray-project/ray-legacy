@@ -7,8 +7,9 @@ import time
 import IPython
 
 test_dir = os.path.dirname(os.path.abspath(__file__))
-test_path = os.path.join(test_dir, "benchmark.py")
-services.start_cluster(num_workers=10, worker_path=test_path)
+# test_path = os.path.join(test_dir, "benchmark.py")
+test_path = os.path.join("benchmark.py")
+services.start_cluster(num_workers=16, worker_path=test_path)
 
 # services.start_cluster(num_workers=16, worker_path="benchmark.py")
 
@@ -33,6 +34,7 @@ books = {
 
 urls = books.values()
 
+# urls = urls + urls + urls + urls
 # urls = urls + urls + urls + urls + urls + urls + urls + urls
 
 urls = 34 * [urls[0]]
@@ -65,9 +67,9 @@ IPython.embed()
 load = [wordcount.load_textfile(url) for url in urls]
 content_refs, size_refs = zip(*load)
 sizes = [op.pull(size) for size in size_refs]
-res = wordcount.split_partitions(sizes, 8)
+res = wordcount.split_into_partitions(sizes, 8)
 
-textfiles = [wordcount.load_textfile(url) for url in urls]
+textfiles = [wordcount.load_textfile(url)[0] for url in urls]
 
 a = time.time(); y = wordcount.map_reduce(*[content_refs[i] for i in res[0]]); d = op.pull(y); b = time.time() - a
 

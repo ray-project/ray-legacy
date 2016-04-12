@@ -62,12 +62,18 @@ def mapreduce(num_mappers, num_reducers, urls):
   content_refs, size_refs = zip(*data)
   sizes = [op.pull(size) for size in size_refs]
   partitions = split_into_partitions(sizes, num_mappers)
-  map_results = [[] for i in range(num_mappers)]
+  map_results = []
   for (i, partition) in enumerate(partitions):
-    map_results[i] = op.pull(map_and_split(num_reducers, *[content_refs[j] for j in partition]))
+    map_results.append(map_and_split(num_reducers, *[content_refs[j] for j in partition]))
+  X = []
+  for map_result in map_results:
+    X.append(op.pull(map_result))
+  reduce_results = []
+  for j in range(num_reducers):
+    reduce_results.append(do_reduce(*[X[i][j] for i in range(num_mappers)]))
   result = {}
   for i in range(num_mappers):
-    result.update(op.pull(do_reduce(*[map_results[i][j] for j in range(num_reducers)])))
+    result.update(op.pull(reduce_results[i]))
   return result
 
 # files = books.values()
