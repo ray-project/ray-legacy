@@ -64,11 +64,11 @@ def mapreduce(num_mappers, num_reducers, urls):
     content_refs, size_refs = zip(*data)
     sizes = [op.pull(size) for size in size_refs]
     b = time.time() - a
-    outfile.write("loading files took " + b + "s\n")
+    outfile.write("loading files took " + str(b) + "s\n")
     a = time.time()
     partitions = split_into_partitions(sizes, num_mappers)
     b = time.time() - a
-    outfile.write("splitting took " + b + "s\n")
+    outfile.write("splitting took " + str(b) + "s\n")
     a = time.time()
     map_results = []
     for (i, partition) in enumerate(partitions):
@@ -77,19 +77,19 @@ def mapreduce(num_mappers, num_reducers, urls):
     for map_result in map_results:
       X.append(op.pull(map_result))
     b = time.time() - a
-    outfile.write("mapping took " + b + "s\n")
+    outfile.write("mapping took " + str(b) + "s\n")
     a = time.time()
     reduce_results = []
     for j in range(num_reducers):
       reduce_results.append(do_reduce(*[X[i][j] for i in range(num_mappers)]))
     b = time.time() - a
-    outfile.write("submitting reducers took " + b + "s\n")
+    outfile.write("submitting reducers took " + str(b) + "s\n")
     a = time.time()
     result = {}
     for i in range(num_mappers):
       result.update(op.pull(reduce_results[i]))
     b = time.time() - a
-    outfile.write("reducing took " + b + "s\n")
+    outfile.write("reducing took " + str(b) + "s\n")
     return result
 
 # files = books.values()
