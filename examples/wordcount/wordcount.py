@@ -6,26 +6,17 @@ import orchpy as op
 import time
 import numpy as np
 
-def split_into_partitions(sizes, num_partitions):
-  total_size = sum(sizes)
-  partition_size = (total_size + num_partitions - 1) // num_partitions
-  perm = sorted(range(len(sizes)), key=lambda k: sizes[k])
-  head, tail = perm, []
-  result = [[] for i in range(num_partitions-1)]
-  # first assign the first num_partitions - 1 partitions
-  for partition in range(len(result)):
-    cur_size = 0
-    while len(head) > 0:
-      elem = head.pop()
-      if sizes[elem] <= partition_size - cur_size:
-        result[partition].append(elem)
-        cur_size += sizes[elem]
-      else:
-        tail.append(elem)
-    head, tail = list(reversed(tail)), []
-  # then assign the last partition
-  result.append(head)
-  return result
+# TODO(pcm): Replace the greedy algorithm by the Karmarkar-Karp heuristic
+def split_tasks(sizes, num_partitions):
+  sorted_sizes = sorted(sizes, reverse=True)
+  indices = range(num_partitions)
+  totals = [0 for i in indices]
+  outlist = [[] for i in indices]
+  for size in sorted_sizes:
+    m = min(indices, key=lambda i: totals[i])
+    totals[m] += size
+    outlist[m].append(size)
+  return outlist
 
 def count_words_local(data):
   c = Counter()
@@ -66,7 +57,7 @@ def mapreduce(num_mappers, num_reducers, urls):
     b = time.time() - a
     outfile.write("loading files took " + str(b) + "s\n")
     a = time.time()
-    partitions = split_into_partitions(sizes, num_mappers)
+    partitions = split_tasks(sizes, num_mappers)
     b = time.time() - a
     outfile.write("splitting took " + str(b) + "s\n")
     a = time.time()
