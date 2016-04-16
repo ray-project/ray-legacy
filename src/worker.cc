@@ -1,3 +1,5 @@
+#include <ether/api.h>
+
 #include "worker.h"
 
 Status WorkerServiceImpl::InvokeCall(ServerContext* context, const InvokeCallRequest* request, InvokeCallReply* reply) {
@@ -88,9 +90,15 @@ void Worker::put_object(ObjRef objref, const Obj* obj) {
   request_obj_queue_.send(&request);
 }
 
-void Worker::put_arrow(ObjRef objref, PyArrayObject* array) {
+void Worker::put_arrow(ObjRef objref, PyObject* obj) {
+  arrow::MemoryPool* pool = arrow::default_memory_pool();
+  PyObjectWriter writer(obj, pool);
+  size_t size = writer.assemble_payload_and_return_size();
+
+  auto data_header = dict_schema();
+
+  std::shared_ptr<arrow::RowBatch> payload = serialize_dict(obj, pool);
   ObjRequest request;
-  size_t size = arrow_size(array);
   request.workerid = workerid_;
   request.type = ObjRequestType::ALLOC;
   request.objref = objref;
@@ -98,13 +106,17 @@ void Worker::put_arrow(ObjRef objref, PyArrayObject* array) {
   request_obj_queue_.send(&request);
   ObjHandle result;
   receive_obj_queue_.receive(&result);
-  store_arrow(array, result, &segmentpool_);
+  uint8_t* address = segmentpool_.get_address(result);
+  auto source = std::make_shared<BufferMemorySource>(address, result.size());
+  // request.metadata_offset = writer.write_object_and_return_metadata_offset(source.get());
+  int64_t data_offset;
+  arrow::ipc::WriteRowBatch(source.get(), payload.get(), 0, &data_offset);
+  request.metadata_offset = data_offset;
   request.type = ObjRequestType::DONE;
-  request.metadata_offset = result.metadata_offset();
   request_obj_queue_.send(&request);
 }
 
-PyArrayObject* Worker::get_arrow(ObjRef objref) {
+PyObject* Worker::get_arrow(ObjRef objref) {
   ObjRequest request;
   request.workerid = workerid_;
   request.type = ObjRequestType::GET;
@@ -112,7 +124,16 @@ PyArrayObject* Worker::get_arrow(ObjRef objref) {
   request_obj_queue_.send(&request);
   ObjHandle result;
   receive_obj_queue_.receive(&result);
-  return (PyArrayObject*)deserialize_array(result, &segmentpool_);
+  uint8_t* address = segmentpool_.get_address(result);
+  auto source = std::make_shared<BufferMemorySource>(address, result.size());
+  // return read_arrow_object(source.get(), result.metadata_offset());
+  std::shared_ptr<arrow::ipc::RowBatchReader> reader;
+  arrow::Status s = arrow::ipc::RowBatchReader::Open(source.get(), result.metadata_offset(), &reader);
+  auto data_header = dict_schema();
+  std::shared_ptr<arrow::RowBatch> data;
+  s = reader->GetRowBatch(data_header, &data);
+  assert(s.ok());
+  return deserialize_dict(data);
 }
 
 bool Worker::is_arrow(ObjRef objref) {

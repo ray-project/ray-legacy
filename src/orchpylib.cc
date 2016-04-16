@@ -12,8 +12,6 @@
 #include "types.pb.h"
 #include "worker.h"
 
-#include "serialize.h"
-
 extern "C" {
 
 // Object references
@@ -413,12 +411,11 @@ PyObject* put_arrow(PyObject* self, PyObject* args) {
   if (!PyArg_ParseTuple(args, "O&O&O", &PyObjectToWorker, &worker, &PyObjectToObjRef, &objref, &value)) {
     return NULL;
   }
-  if (!PyArray_Check(value)) {
-    PyErr_SetString(PyExc_TypeError, "only support arrays at this point");
+  if (!PyDict_Check(value)) {
+    PyErr_SetString(PyExc_TypeError, "only support dicts at this point");
     return NULL;
   }
-  PyArrayObject* array = PyArray_GETCONTIGUOUS((PyArrayObject*) value);
-  worker->put_arrow(objref, array);
+  worker->put_arrow(objref, value);
   Py_RETURN_NONE;
 }
 

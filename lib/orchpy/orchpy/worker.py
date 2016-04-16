@@ -15,7 +15,8 @@ class Worker(object):
 
   def put_object(self, objref, value):
     """Put `value` in the local object store with objref `objref`. This assumes that the value for `objref` has not yet been placed in the local object store."""
-    if type(value) == np.ndarray and not (value.dtype == np.dtype("object")):
+    # if type(value) == np.ndarray and not (value.dtype == np.dtype("object")):
+    if type(value) == dict:
       orchpy.lib.put_arrow(self.handle, objref, value)
     else:
       object_capsule = serialization.serialize(value)

@@ -16,7 +16,6 @@ using grpc::Status;
 #include "orchestra.grpc.pb.h"
 #include "orchestra/orchestra.h"
 #include "ipc.h"
-#include "serialize.h"
 
 using grpc::Channel;
 using grpc::ClientContext;
@@ -53,9 +52,9 @@ class Worker {
   slice get_object(ObjRef objref);
   // stores an arrow object to the local object store
   // FIXME(pcm): Once we have structs in arrow, get rid of the memcpy here
-  void put_arrow(ObjRef objref, PyArrayObject* array);
+  void put_arrow(ObjRef objref, PyObject* array);
   // gets an arrow object from the local object store
-  PyArrayObject* get_arrow(ObjRef objref);
+  PyObject* get_arrow(ObjRef objref);
   // determine if the object stored in objref is an arrow object // TODO(pcm): more general mechanism for this?
   bool is_arrow(ObjRef objref);
   // register function with scheduler
