@@ -77,7 +77,7 @@ def mapreduce(num_mappers, num_reducers, urls):
     outfile.write("submitting reducers took " + str(b) + "s\n")
     a = time.time()
     result = {}
-    for i in range(num_mappers):
+    for i in range(num_reducers):
       result.update(op.pull(reduce_results[i]))
     b = time.time() - a
     outfile.write("reducing took " + str(b) + "s\n")
