@@ -58,7 +58,7 @@ def do_reduce(*dicts):
 
 @op.distributed([int, int, list], [dict])
 def mapreduce(num_mappers, num_reducers, urls):
-  with open(newfile, 'w') as outfile:
+  with open("/tmp/timing", 'w') as outfile:
     a = time.time()
     data = [load_textfile(url) for url in urls]
     content_refs, size_refs = zip(*data)
