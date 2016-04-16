@@ -8,14 +8,14 @@ import numpy as np
 
 # TODO(pcm): Replace the greedy algorithm by the Karmarkar-Karp heuristic
 def split_tasks(sizes, num_partitions):
-  sorted_sizes = sorted(sizes, reverse=True)
+  perm = sorted(range(len(sizes)), key=lambda k: sizes[k], reverse=True)
   indices = range(num_partitions)
   totals = [0 for i in indices]
   outlist = [[] for i in indices]
-  for size in sorted_sizes:
-    m = min(indices, key=lambda i: totals[i])
+  for i in perm:
+    m = min(indices, key=lambda j: totals[j])
     totals[m] += size
-    outlist[m].append(size)
+    outlist[m].append(i)
   return outlist
 
 def count_words_local(data):
