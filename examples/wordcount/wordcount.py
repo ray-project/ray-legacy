@@ -14,7 +14,7 @@ def split_tasks(sizes, num_partitions):
   outlist = [[] for i in indices]
   for i in perm:
     m = min(indices, key=lambda j: totals[j])
-    totals[m] += size
+    totals[m] += sizes[i]
     outlist[m].append(i)
   return outlist
 
