@@ -4,7 +4,8 @@
 
 #include <Python.h>
 #include <structmember.h>
-#define PY_ARRAY_UNIQUE_SYMBOL ORCHESTRA_ARRAY_API
+#define PY_ARRAY_UNIQUE_SYMBOL ETHER_ARRAY_API
+// #define PY_ARRAY_UNIQUE_SYMBOL ORCHESTRA_ARRAY_API
 #include <numpy/arrayobject.h>
 #include <arrow/api.h>
 #include <iostream>
@@ -409,10 +410,6 @@ PyObject* put_arrow(PyObject* self, PyObject* args) {
   ObjRef objref;
   PyObject* value;
   if (!PyArg_ParseTuple(args, "O&O&O", &PyObjectToWorker, &worker, &PyObjectToObjRef, &objref, &value)) {
-    return NULL;
-  }
-  if (!PyDict_Check(value)) {
-    PyErr_SetString(PyExc_TypeError, "only support dicts at this point");
     return NULL;
   }
   worker->put_arrow(objref, value);

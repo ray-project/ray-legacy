@@ -11,6 +11,10 @@ from grpc.beta import implementations
 import orchestra_pb2
 import types_pb2
 
+import orchpy
+import numpy as np
+import scipy.sparse
+
 TIMEOUT_SECONDS = 5
 
 parser = argparse.ArgumentParser(description='Parse addresses for the worker to connect to.')
@@ -50,6 +54,10 @@ if __name__ == '__main__':
 
   def objstore_debug_info():
     return objstore_stub.ObjStoreDebugInfo(orchestra_pb2.ObjStoreDebugInfoRequest(), TIMEOUT_SECONDS)
+
+
+  M = scipy.sparse.csr_matrix(np.eye(200, 200))
+  m = orchpy.push(M)
 
   import IPython
   IPython.embed()

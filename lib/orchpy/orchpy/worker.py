@@ -1,6 +1,7 @@
 from types import ModuleType
 import typing
 import numpy as np
+import scipy.sparse
 
 import orchpy
 import serialization
@@ -16,7 +17,7 @@ class Worker(object):
   def put_object(self, objref, value):
     """Put `value` in the local object store with objref `objref`. This assumes that the value for `objref` has not yet been placed in the local object store."""
     # if type(value) == np.ndarray and not (value.dtype == np.dtype("object")):
-    if type(value) == dict:
+    if type(value) == dict or type(value) == scipy.sparse.csr_matrix:
       orchpy.lib.put_arrow(self.handle, objref, value)
     else:
       object_capsule = serialization.serialize(value)
