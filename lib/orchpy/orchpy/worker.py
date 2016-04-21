@@ -27,9 +27,13 @@ class Worker(object):
     """Return the value from the local object store for objref `objref`. This will block until the value for `objref` has been written to the local object store."""
     if orchpy.lib.is_arrow(self.handle, objref):
       try:
-        return orchpy.lib.get_arrow(self.handle, objref)
+        result = orchpy.lib.get_arrow(self.handle, objref)
       except:
         pass
+      if type(result) == tuple:
+        return scipy.sparse.csr_matrix((result[4], result[2], result[3]), shape=(result[0], result[1]))
+      else:
+        return result
     object_capsule = orchpy.lib.get_object(self.handle, objref)
     return serialization.deserialize(object_capsule)
 
