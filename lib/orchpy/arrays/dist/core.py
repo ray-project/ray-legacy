@@ -6,7 +6,7 @@ import orchpy as op
 __all__ = ["BLOCK_SIZE", "DistArray", "assemble", "zeros", "ones", "copy",
            "eye", "triu", "tril", "blockwise_dot", "dot", "block_column", "block_row"]
 
-BLOCK_SIZE = 10
+BLOCK_SIZE = 1000
 
 class DistArray(object):
   def construct(self, shape, objrefs):

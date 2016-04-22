@@ -1,6 +1,7 @@
 #include <ether/api.h>
 
 #include "worker.h"
+#include "serialize.h"
 
 Status WorkerServiceImpl::InvokeCall(ServerContext* context, const InvokeCallRequest* request, InvokeCallReply* reply) {
   call_ = request->call(); // Copy call
@@ -93,7 +94,12 @@ void Worker::put_object(ObjRef objref, const Obj* obj) {
 void Worker::put_arrow(ObjRef objref, PyObject* obj) {
   arrow::MemoryPool* pool = arrow::default_memory_pool();
   PyObjectWriter writer(obj, pool);
-  size_t size = writer.assemble_payload_and_return_size();
+  size_t size;
+  if (PyArray_Check(obj)) {
+    size = arrow_size((PyArrayObject*) obj);
+  } else {
+    size = writer.assemble_payload_and_return_size();
+  }
   ObjRequest request;
   request.workerid = workerid_;
   request.type = ObjRequestType::ALLOC;
@@ -104,7 +110,11 @@ void Worker::put_arrow(ObjRef objref, PyObject* obj) {
   receive_obj_queue_.receive(&result);
   uint8_t* address = segmentpool_.get_address(result);
   auto source = std::make_shared<BufferMemorySource>(address, result.size());
-  request.metadata_offset = writer.write_object_and_return_metadata_offset(source.get());
+  if (PyArray_Check(obj)) {
+    store_arrow((PyArrayObject*) obj, result, &segmentpool_);
+  } else {
+    request.metadata_offset = writer.write_object_and_return_metadata_offset(source.get());
+  }
   request.type = ObjRequestType::DONE;
   request_obj_queue_.send(&request);
 }
@@ -119,7 +129,8 @@ PyObject* Worker::get_arrow(ObjRef objref) {
   receive_obj_queue_.receive(&result);
   uint8_t* address = segmentpool_.get_address(result);
   auto source = std::make_shared<BufferMemorySource>(address, result.size());
-  return read_arrow_object(source.get(), result.metadata_offset());
+  // return read_arrow_object(source.get(), result.metadata_offset());
+  return deserialize_array(result, &segmentpool_);
 }
 
 bool Worker::is_arrow(ObjRef objref) {

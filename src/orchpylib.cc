@@ -4,8 +4,8 @@
 
 #include <Python.h>
 #include <structmember.h>
-#define PY_ARRAY_UNIQUE_SYMBOL ETHER_ARRAY_API
-// #define PY_ARRAY_UNIQUE_SYMBOL ORCHESTRA_ARRAY_API
+// #define PY_ARRAY_UNIQUE_SYMBOL ETHER_ARRAY_API
+#define PY_ARRAY_UNIQUE_SYMBOL ORCHESTRA_ARRAY_API
 #include <numpy/arrayobject.h>
 #include <arrow/api.h>
 #include <iostream>

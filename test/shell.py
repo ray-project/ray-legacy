@@ -56,8 +56,8 @@ if __name__ == '__main__':
     return objstore_stub.ObjStoreDebugInfo(orchestra_pb2.ObjStoreDebugInfoRequest(), TIMEOUT_SECONDS)
 
 
-  M = scipy.sparse.csr_matrix(np.eye(200, 200))
-  m = orchpy.push(M)
+  # M = scipy.sparse.csr_matrix(np.eye(200, 200))
+  # m = orchpy.push(M)
 
   import IPython
   IPython.embed()
