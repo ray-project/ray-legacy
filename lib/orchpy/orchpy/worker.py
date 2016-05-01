@@ -19,12 +19,12 @@ class Worker(object):
     if type(value) == sp.csr_matrix:
       d = {"data": value.data, "indices": value.indices, "indptr": value.indptr}
       orchpy.lib.put_arrow(self.handle, objref, d)
-    if type(value) == np.ndarray:
+    elif type(value) == np.ndarray:
       orchpy.lib.put_arrow(self.handle, objref, value)
-    if type(value) == sp.coo_matrix:
+    elif type(value) == sp.coo_matrix:
       d = {"row": value.row, "col": value.col, "data": value.data}
       orchpy.lib.put_arrow(self.handle, objref, d)
-    if type(value) == dict or type(value) == np.ndarray:
+    elif type(value) == dict or type(value) == np.ndarray:
       orchpy.lib.put_arrow(value)
     else:
       object_capsule, contained_objrefs = serialization.serialize(self.handle, value) # contained_objrefs is a list of the objrefs contained in object_capsule
