@@ -2,6 +2,7 @@ from types import ModuleType
 import typing
 import numpy as np
 import pynumbuf
+import scipy.sparse as sp
 
 import orchpy
 import serialization
@@ -15,8 +16,16 @@ class Worker(object):
 
   def put_object(self, objref, value):
     """Put `value` in the local object store with objref `objref`. This assumes that the value for `objref` has not yet been placed in the local object store."""
-    if pynumbuf.serializable(value):
+    if type(value) == sp.csr_matrix:
+      d = {"data": value.data, "indices": value.indices, "indptr": value.indptr}
+      orchpy.lib.put_arrow(self.handle, objref, d)
+    if type(value) == np.ndarray:
       orchpy.lib.put_arrow(self.handle, objref, value)
+    if type(value) == sp.coo_matrix:
+      d = {"row": value.row, "col": value.col, "data": value.data}
+      orchpy.lib.put_arrow(self.handle, objref, d)
+    if type(value) == dict or type(value) == np.ndarray:
+      orchpy.lib.put_arrow(value)
     else:
       object_capsule, contained_objrefs = serialization.serialize(self.handle, value) # contained_objrefs is a list of the objrefs contained in object_capsule
       orchpy.lib.put_object(self.handle, objref, object_capsule, contained_objrefs)
@@ -29,7 +38,13 @@ class Worker(object):
     WARNING: get_object can only be called on a canonical objref.
     """
     if orchpy.lib.is_arrow(self.handle, objref):
-      return orchpy.lib.get_arrow(self.handle, objref)
+      d = orchpy.lib.get_arrow(self.handle, objref)
+      if type(d) == dict and len(d) == 3:
+        if all (k in d for k in ("data","indices","indptr")):
+          return sp.csr_matrix((d["data"], d["indices"], d["indptr"]))
+        elif all (k in d for k in ("row", "col", "data")):
+          return sp.coo_matrix((d["data"], (d["row"], d["col"])))
+      return d
     else:
       object_capsule = orchpy.lib.get_object(self.handle, objref)
       return serialization.deserialize(self.handle, object_capsule)
