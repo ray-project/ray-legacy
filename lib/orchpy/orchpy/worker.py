@@ -18,12 +18,12 @@ class Worker(object):
   def put_object(self, objref, value):
     """Put `value` in the local object store with objref `objref`. This assumes that the value for `objref` has not yet been placed in the local object store."""
     if type(value) == sp.csr_matrix:
-      d = {"data": value.data, "indices": value.indices, "indptr": value.indptr}
+      d = {"shape": np.array(value.shape), "data": value.data, "indices": value.indices, "indptr": value.indptr}
       orchpy.lib.put_arrow(self.handle, objref, d)
     elif type(value) == np.ndarray:
       orchpy.lib.put_arrow(self.handle, objref, value)
     elif type(value) == sp.coo_matrix:
-      d = {"row": value.row, "col": value.col, "data": value.data}
+      d = {"shape": np.array(value.shape), "row": value.row, "col": value.col, "data": value.data}
       orchpy.lib.put_arrow(self.handle, objref, d)
     elif type(value) == dict or type(value) == np.ndarray:
       orchpy.lib.put_arrow(value)
@@ -40,11 +40,11 @@ class Worker(object):
     """
     if orchpy.lib.is_arrow(self.handle, objref):
       d = orchpy.lib.get_arrow(self.handle, objref)
-      if type(d) == dict and len(d) == 3:
-        if all (k in d for k in ("data","indices","indptr")):
-          return sp.csr_matrix((d["data"], d["indices"], d["indptr"]))
-        elif all (k in d for k in ("row", "col", "data")):
-          return sp.coo_matrix((d["data"], (d["row"], d["col"])))
+      if type(d) == dict and len(d) == 4:
+        if all (k in d for k in ("shape", "data", "indices", "indptr")):
+          return sp.csr_matrix((d["data"], d["indices"], d["indptr"]), shape=d["shape"])
+        elif all (k in d for k in ("shape", "row", "col", "data")):
+          return sp.coo_matrix((d["data"], (d["row"], d["col"])), shape=d["shape"])
       return d
     else:
       object_capsule = orchpy.lib.get_object(self.handle, objref)
