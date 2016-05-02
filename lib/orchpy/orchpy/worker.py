@@ -1,4 +1,5 @@
 from types import ModuleType
+import time
 import typing
 import numpy as np
 import pynumbuf
