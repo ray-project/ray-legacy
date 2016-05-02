@@ -105,12 +105,21 @@ def main_loop(worker=global_worker):
   def process_call(call): # wrapping these calls in a function should cause the local variables to go out of scope more quickly, which is useful for inspecting reference counts
     a = time.time()
     func_name, args, return_objrefs = serialization.deserialize_call(worker.handle, call)
+    b = time.time() - a
+    print "deserialize took ", b
+    a = time.time()
     arguments = get_arguments_for_execution(worker.functions[func_name], args, worker) # get args from objstore
+    b = time.time() - a
+    print "getting args took ", b
+    a = time.time()
     outputs = worker.functions[func_name].executor(arguments) # execute the function
+    b = time.time() - a
+    print "executing took ", b
+    a = time.time()
     store_outputs_in_objstore(return_objrefs, outputs, worker) # store output in local object store
     orchpy.lib.notify_task_completed(worker.handle) # notify the scheduler that the task has completed
-    b = time.time() - a
-    print "process_call took ", b
+    a = time.time() - a
+    print "finishing took ", a
   while True:
     call = orchpy.lib.wait_for_next_task(worker.handle)
     process_call(call)
