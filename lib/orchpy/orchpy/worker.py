@@ -102,11 +102,14 @@ def main_loop(worker=global_worker):
     raise Exception("Worker is attempting to enter main_loop but has not been connected yet.")
   orchpy.lib.start_worker_service(worker.handle)
   def process_call(call): # wrapping these calls in a function should cause the local variables to go out of scope more quickly, which is useful for inspecting reference counts
+    a = time.time()
     func_name, args, return_objrefs = serialization.deserialize_call(worker.handle, call)
     arguments = get_arguments_for_execution(worker.functions[func_name], args, worker) # get args from objstore
     outputs = worker.functions[func_name].executor(arguments) # execute the function
     store_outputs_in_objstore(return_objrefs, outputs, worker) # store output in local object store
     orchpy.lib.notify_task_completed(worker.handle) # notify the scheduler that the task has completed
+    b = time.time() - a
+    print "process_call took ", b
   while True:
     call = orchpy.lib.wait_for_next_task(worker.handle)
     process_call(call)
