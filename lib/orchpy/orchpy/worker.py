@@ -115,10 +115,10 @@ def distributed(arg_types, return_types, worker=global_worker):
   def distributed_decorator(func):
     def func_executor(arguments):
       """This is what gets executed remotely on a worker after a distributed function is scheduled by the scheduler."""
-      print "Calling function {}".format(func.__name__)
+      # print "Calling function {}".format(func.__name__)
       result = func(*arguments)
       check_return_values(func_call, result) # throws an exception if result is invalid
-      print "Finished executing function {}".format(func.__name__)
+      # print "Finished executing function {}".format(func.__name__)
       return result
     def func_call(*args):
       """This is what gets run immediately when a worker calls a distributed function."""
