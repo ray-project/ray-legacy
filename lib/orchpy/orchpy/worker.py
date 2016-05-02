@@ -195,9 +195,9 @@ def get_arguments_for_execution(function, args, worker=global_worker):
 
     if isinstance(arg, orchpy.lib.ObjRef):
       # get the object from the local object store
-      print "Getting argument {} for function {}.".format(i, function.__name__)
+      # print "Getting argument {} for function {}.".format(i, function.__name__)
       argument = worker.get_object(arg)
-      print "Successfully retrieved argument {} for function {}.".format(i, function.__name__)
+      # print "Successfully retrieved argument {} for function {}.".format(i, function.__name__)
     else:
       # pass the argument by value
       argument = arg
