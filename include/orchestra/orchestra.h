@@ -40,17 +40,7 @@ typedef std::unordered_map<std::string, FnInfo> FnTable;
 #define ORCH_REFCOUNT ORCH_VERBOSE
 #define ORCH_ALIAS ORCH_VERBOSE
 
-#define ORCH_LOG(LEVEL, MESSAGE) \
-  if (LEVEL == ORCH_VERBOSE) { \
-    \
-  } else if (LEVEL == ORCH_FATAL) { \
-    std::cerr << "fatal error occured: " << MESSAGE << std::endl; \
-    std::exit(1); \
-  } else if (LEVEL == ORCH_DEBUG) { \
-    \
-  } else { \
-    std::cout << MESSAGE << std::endl; \
-  }
+#define ORCH_LOG(LEVEL, MESSAGE)
 
 class objstore_not_registered_error : public std::runtime_error
 {
