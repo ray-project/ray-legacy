@@ -148,13 +148,14 @@ PyObject* Worker::put_arrow(ObjRef objref, PyObject* value) {
   if (!connected_) {
     ORCH_LOG(ORCH_FATAL, "Attempting to perform put_arrow, but connected_ = " << connected_ << ".");
   }
-  double a = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+  auto start1 = high_resolution_clock::now();
   ObjRequest request;
   pynumbuf::PythonObjectWriter writer;
   int64_t size;
   CHECK_ARROW_STATUS(writer.AssemblePayload(value), "error during AssemblePayload: ");
-  double b = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() - a;
-  std::cout << "assemble took " << b << std::endl;
+  auto ellapsed1 = high_resolution_clock::now() - start1;
+  long long microseconds1 = duration_cast<microseconds>(ellapsed1).count();
+  std::cout << "assemble took " << microseconds1 << std::endl;
   CHECK_ARROW_STATUS(writer.GetTotalSize(&size), "error during GetTotalSize: ");
   request.workerid = workerid_;
   request.type = ObjRequestType::ALLOC;
@@ -166,10 +167,11 @@ PyObject* Worker::put_arrow(ObjRef objref, PyObject* value) {
   int64_t metadata_offset;
   uint8_t* address = segmentpool_->get_address(result);
   auto source = std::make_shared<BufferMemorySource>(address, size);
-  a = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+  auto start2 = high_resolution_clock::now();
   CHECK_ARROW_STATUS(writer.Write(source.get(), &metadata_offset), "error during Write: ");
-  b = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() - a;
-  std::cout << "write took " << b << std::endl;
+  auto ellapsed2 = high_resolution_clock::now() - start2;
+  long long microseconds2 = duration_cast<microseconds>(ellapsed2).count();
+  std::cout << "write took " << microseconds2 << std::endl;
   request.type = ObjRequestType::WORKER_DONE;
   request.metadata_offset = metadata_offset;
   request_obj_queue_.send(&request);
