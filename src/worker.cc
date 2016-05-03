@@ -227,6 +227,7 @@ void Worker::increment_reference_count(std::vector<ObjRef> &objrefs) {
     ORCH_LOG(ORCH_DEBUG, "Attempting to increment_reference_count for objrefs, but connected_ = " << connected_ << " so returning instead.");
     return;
   }
+  /*
   ClientContext context;
   IncrementRefCountRequest request;
   for (int i = 0; i < objrefs.size(); ++i) {
@@ -235,6 +236,7 @@ void Worker::increment_reference_count(std::vector<ObjRef> &objrefs) {
   }
   AckReply reply;
   scheduler_stub_->IncrementRefCount(&context, request, &reply);
+  */
 }
 
 void Worker::decrement_reference_count(std::vector<ObjRef> &objrefs) {
@@ -242,6 +244,7 @@ void Worker::decrement_reference_count(std::vector<ObjRef> &objrefs) {
     ORCH_LOG(ORCH_DEBUG, "Attempting to decrement_reference_count, but connected_ = " << connected_ << " so returning instead.");
     return;
   }
+  /*
   ClientContext context;
   DecrementRefCountRequest request;
   for (int i = 0; i < objrefs.size(); ++i) {
@@ -250,6 +253,7 @@ void Worker::decrement_reference_count(std::vector<ObjRef> &objrefs) {
   }
   AckReply reply;
   scheduler_stub_->DecrementRefCount(&context, request, &reply);
+  */
 }
 
 void Worker::register_function(const std::string& name, size_t num_return_vals) {
