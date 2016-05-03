@@ -148,12 +148,12 @@ PyObject* Worker::put_arrow(ObjRef objref, PyObject* value) {
   if (!connected_) {
     ORCH_LOG(ORCH_FATAL, "Attempting to perform put_arrow, but connected_ = " << connected_ << ".");
   }
-  int a = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+  double a = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
   ObjRequest request;
   pynumbuf::PythonObjectWriter writer;
   int64_t size;
   CHECK_ARROW_STATUS(writer.AssemblePayload(value), "error during AssemblePayload: ");
-  int b = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() - a;
+  double b = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() - a;
   std::cout << "assemble took " << b << std::endl;
   CHECK_ARROW_STATUS(writer.GetTotalSize(&size), "error during GetTotalSize: ");
   request.workerid = workerid_;
