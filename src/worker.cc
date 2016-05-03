@@ -4,6 +4,10 @@
 
 #include <pynumbuf/serialize.h>
 
+#include <chrono>
+
+using namespace std::chrono;
+
 extern "C" {
   static PyObject *OrchPyError;
 }
@@ -144,10 +148,13 @@ PyObject* Worker::put_arrow(ObjRef objref, PyObject* value) {
   if (!connected_) {
     ORCH_LOG(ORCH_FATAL, "Attempting to perform put_arrow, but connected_ = " << connected_ << ".");
   }
+  int a = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
   ObjRequest request;
   pynumbuf::PythonObjectWriter writer;
   int64_t size;
   CHECK_ARROW_STATUS(writer.AssemblePayload(value), "error during AssemblePayload: ");
+  int b = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() - a;
+  std::cout << "assemble took " << b << std::endl;
   CHECK_ARROW_STATUS(writer.GetTotalSize(&size), "error during GetTotalSize: ");
   request.workerid = workerid_;
   request.type = ObjRequestType::ALLOC;
@@ -159,7 +166,10 @@ PyObject* Worker::put_arrow(ObjRef objref, PyObject* value) {
   int64_t metadata_offset;
   uint8_t* address = segmentpool_->get_address(result);
   auto source = std::make_shared<BufferMemorySource>(address, size);
+  a = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
   CHECK_ARROW_STATUS(writer.Write(source.get(), &metadata_offset), "error during Write: ");
+  b = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() - a;
+  std::cout << "write took " << b << std::endl;
   request.type = ObjRequestType::WORKER_DONE;
   request.metadata_offset = metadata_offset;
   request_obj_queue_.send(&request);
