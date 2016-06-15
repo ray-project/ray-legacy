@@ -17,3 +17,11 @@ const Task& ComputationGraph::get_task(OperationId operationid) {
   RAY_CHECK(operations_[operationid]->has_task(), "Calling get_task with operationid " << operationid << ", but this corresponds to a push not a task.");
   return operations_[operationid]->task();
 }
+
+CompGraph ComputationGraph::to_protobuf() {
+  CompGraph result;
+  for (OperationId id = 0; id < operations_.size(); ++id) {
+    result.add_operation()->CopyFrom(*operations_[id]);
+  }
+  return result;
+}

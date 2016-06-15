@@ -13,6 +13,7 @@
 syntax = "proto3";
 
 import "types.proto";
+import "graph.proto";
 
 // Scheduler
 

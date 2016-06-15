@@ -5,6 +5,8 @@
 #include <limits>
 
 #include "ray/ray.h"
+
+#include "graph.pb.h"
 #include "ray.grpc.pb.h"
 #include "types.pb.h"
 
@@ -21,6 +23,8 @@ public:
   // Return the task corresponding to a particular OperationId. If operationid
   // corresponds to a push, then fail.
   const Task& get_task(OperationId operationid);
+  // Serialize the computation graph to ProtoBuf
+  CompGraph to_protobuf();
 private:
   // maps an OperationId to the corresponding task or push
   std::vector<std::unique_ptr<Operation> > operations_;
