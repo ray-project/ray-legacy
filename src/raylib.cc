@@ -817,7 +817,7 @@ static PyObject* scheduler_info(PyObject* self, PyObject* args) {
   }
   PyObject* avail_workers_list = PyList_New(reply.avail_worker_size());
   for (size_t i = 0; i < reply.avail_worker_size(); ++i) {
-    PyList_SetItem(task_queue_list, i, PyInt_FromLong(reply.avail_worker(i)));
+    PyList_SetItem(avail_workers_list, i, PyInt_FromLong(reply.avail_worker(i)));
   }
 
   PyObject* dict = PyDict_New();
