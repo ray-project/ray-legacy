@@ -515,7 +515,7 @@ void SchedulerService::get_info(const SchedulerInfoRequest& request, SchedulerIn
     }
   }
   for (const auto& entry : *task_queue_.unsafe_get()) {
-    reply->add_operationid(entry);
+    reply->add_task_queue(entry);
   }
   for (const WorkerId& entry : *avail_workers_.unsafe_get()) {
     reply->add_avail_worker(entry);

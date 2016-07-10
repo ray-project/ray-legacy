@@ -811,10 +811,16 @@ static PyObject* scheduler_info(PyObject* self, PyObject* args) {
   for (size_t i = 0; i < reply.reference_count_size(); ++i) {
     PyList_SetItem(reference_count_list, i, PyInt_FromLong(reply.reference_count(i)));
   }
+  PyObject* task_queue_list = PyList_New(reply.task_queue_size());
+  for (size_t i = 0; i < reply.task_queue_size(); ++i) {
+    PyList_SetItem(task_queue_list, i, PyInt_FromLong(reply.task_queue(i)));
+  }
 
   PyObject* dict = PyDict_New();
   set_dict_item_and_transfer_ownership(dict, PyString_FromString("target_objrefs"), target_objref_list);
   set_dict_item_and_transfer_ownership(dict, PyString_FromString("reference_counts"), reference_count_list);
+  set_dict_item_and_transfer_ownership(dict, PyString_FromString("task_queue"), task_queue_list);
+
   return dict;
 }
 
