@@ -516,7 +516,7 @@ static PyObject* get_buffer(PyObject* self, PyObject* args) {
     return NULL;
   }
   void* address = reinterpret_cast<void*>(const_cast<char*>(worker->get_buffer(objref, size, segmentid, metadata_offset)));
-  std::vector<npy_intp> dim({size});
+  std::vector<npy_intp> dim({static_cast<npy_intp>(size)});
   PyObject* t = PyTuple_New(3);
   PyTuple_SetItem(t, 0, PyArray_SimpleNewFromData(1, dim.data(), NPY_BYTE, address));
   PyTuple_SetItem(t, 1, PyInt_FromLong(segmentid));
