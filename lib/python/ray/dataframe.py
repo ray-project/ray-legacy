@@ -1,5 +1,6 @@
 import pandas as pd
 import ray
+from typing import Any
 
 class DataFrameChunk(pd.core.frame.DataFrame):
   @staticmethod
@@ -10,7 +11,7 @@ class DataFrameChunk(pd.core.frame.DataFrame):
     return self.to_json()
 
 class DDataFrame(object):
-  def __init__(self, data, chunk_row_size=100)
+  def __init__(self, data, chunk_row_size=100):
     if isinstance(data, list):
       self.objectids = data
     else:
@@ -27,9 +28,9 @@ class DDataFrame(object):
     return pd.concat([ray.get(dataframe_ref) for dataframe_ref in self.objectids], ignore_index=True)
   
   def __getitem__(self, key):
-    return DDataFrame([chunk_getitem(dfc, key) for dfc in self.objectids])
+    return DDataFrame([chunk_getitem.remote(dfc, key) for dfc in self.objectids])
 
   
-@ray.remote([DataFrameChunk, any], [DataFrameChunk])
+@ray.remote([DataFrameChunk, Any], [DataFrameChunk])
 def chunk_getitem(dfc, key):
-  return dfc[key]
+  return DataFrameChunk(dfc[key])
