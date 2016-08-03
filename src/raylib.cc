@@ -284,6 +284,13 @@ int serialize(PyObject* worker_capsule, PyObject* val, Obj* obj, std::vector<Obj
         return -1;
       }
     }
+  } else if (PyUnicode_Check(val)) {
+    PyObject* string = PyUnicode_AsASCIIString(val);
+    char* buffer;
+    Py_ssize_t length;
+    PyString_AsStringAndSize(val, &buffer, &length); // creates pointer to internal buffer
+    obj->mutable_string_data()->set_data(buffer, length);
+    Py_XDECREF(string);
   } else if (PyString_Check(val)) {
     char* buffer;
     Py_ssize_t length;
@@ -343,12 +350,12 @@ int serialize(PyObject* worker_capsule, PyObject* val, Obj* obj, std::vector<Obj
         }
         break;
       default:
-        PyErr_SetString(RayError, "serialization: numpy datatype not know");
+        PyErr_SetString(RayError, "serialization: numpy datatype not known");
         return -1;
     }
     Py_DECREF(array); // TODO(rkn): is this right?
   } else {
-    PyErr_SetString(RayError, "serialization: type not know");
+    PyErr_SetString(RayError, "serialization: type not known");
     return -1;
   }
   return 0;
