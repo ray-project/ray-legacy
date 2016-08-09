@@ -116,3 +116,52 @@ def do_rollouts_remote(agent, timestep_limit, n_timesteps, n_parallel, seed_iter
 
 On the same m4.4xlarge EC2 instance, the first 10 iterations now take 42s instead of
 106s.
+
+## Running TRPO on a cluster
+
+You should follow the
+[guide](https://github.com/amplab/ray/blob/master/doc/using-ray-on-a-cluster.md)
+to set up a Ray cluster. For these experiments I ran
+
+
+```
+python ec2.py --key-pair=<keypair>
+              --identity-file=<path to .pem file>
+              --region=us-east-1
+              --master-instance-type=c4.8xlarge
+              --instance-type=c4.4xlarge
+              --spot-price=2.50
+              --slaves=2
+              launch ray-cluster
+```
+
+inside of the ray/scripts directory. Then inside the same directory,
+
+```
+python cluster.py --nodes=nodes.txt --key-file=<path to .pem file> --username=ubuntu
+```
+
+Inside the shell, run `cluster.install_ray()`.
+
+
+I recommend installing Anaconda. To do this, copy ray/scripts/nodes.txt to
+ray/scripts/hosts.txt and remove the private IP from each line (everything after
+the comma, including the comma). You can then install Anaconda on the cluster
+by running these commands inside of ray/scripts:
+
+```
+ssh-add <path to .pem file>
+parallel-ssh -l ubuntu -h hosts.txt "wget http://repo.continuum.io/archive/Anaconda2-4.1.1-Linux-x86_64.sh"
+parallel-ssh -h hosts.txt "bash ~/Anaconda2-4.1.1-Linux-x86_64.sh -b"
+parallel-ssh -l ubuntu -h hosts.txt "echo 'export PATH=\$HOME/anaconda2/bin/:\$PATH' >> ~/.bashrc"
+```
+
+Install further dependencies:
+
+```
+parallel-ssh -l ubuntu -h hosts.txt "pip install ipython typing funcsigs subprocess32 protobuf colorama graphviz cloudpickle"
+parallel-ssh -l ubuntu -h hosts.txt "pip install theano gym"
+parallel-ssh -l ubuntu -h hosts.txt "sudo apt-get install -y pachi"
+parallel-ssh -l ubuntu -h hosts.txt "pip install pachi_py"
+parallel-ssh -l ubuntu -h hosts.txt "pip install keras tabulate"
+```
