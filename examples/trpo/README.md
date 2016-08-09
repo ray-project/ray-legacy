@@ -151,8 +151,9 @@ by running these commands inside of ray/scripts:
 
 ```
 ssh-add <path to .pem file>
+parallel-ssh -l ubuntu -h hosts.txt "sudo apt-get install -y wget"
 parallel-ssh -l ubuntu -h hosts.txt "wget http://repo.continuum.io/archive/Anaconda2-4.1.1-Linux-x86_64.sh"
-parallel-ssh -h hosts.txt "bash ~/Anaconda2-4.1.1-Linux-x86_64.sh -b"
+parallel-ssh -l ubuntu -h hosts.txt "bash ~/Anaconda2-4.1.1-Linux-x86_64.sh -b"
 parallel-ssh -l ubuntu -h hosts.txt "echo 'export PATH=\$HOME/anaconda2/bin/:\$PATH' >> ~/.bashrc"
 ```
 
