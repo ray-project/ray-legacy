@@ -127,7 +127,7 @@ to set up a Ray cluster. For these experiments I ran
 ```
 python ec2.py --key-pair=awskey \
               --identity-file=awskey.pem \
-              --region=us-east-1 \
+              --region=us-west-1 \
               --master-instance-type=c4.8xlarge \
               --instance-type=c4.4xlarge \
               --spot-price=2.50 \
@@ -173,4 +173,20 @@ cd ~
 git checkout https://github.com/pcmoritz/modular_rl
 cd modular_rl
 git checkout remote
+```
+
+In the ray cluster.py shell now execute
+
+```
+cluster.start_ray(user_source_directory="~/modular_rl", num_workers_per_node=16)
+```
+
+Now, ssh to the head node of your cluster (the first line of nodes.txt), edit
+`~/user_source_files/modular_rl/run_pg.py` and replace the `ray.init` line
+with the line that `cluster.start_ray` printed. Then run
+
+```
+./run_pg.py --env Go9x9-v0 --agent modular_rl.agentzoo.TrpoAgent --video=0 \
+            --remote 1 --timesteps_per_batch=2000 --hid_sizes=244,81 \
+            --n_rollouts=40 --n_iter=1000
 ```
