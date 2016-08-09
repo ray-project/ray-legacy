@@ -125,14 +125,14 @@ to set up a Ray cluster. For these experiments I ran
 
 
 ```
-python ec2.py --key-pair=<keypair>
-              --identity-file=<path to .pem file>
-              --region=us-east-1
-              --master-instance-type=c4.8xlarge
-              --instance-type=c4.4xlarge
-              --spot-price=2.50
-              --slaves=2
-              launch ray-cluster
+python ec2.py --key-pair=awskey \
+              --identity-file=awskey.pem \
+              --region=us-east-1 \
+              --master-instance-type=c4.8xlarge \
+              --instance-type=c4.4xlarge \
+              --spot-price=2.50 \
+              --slaves=2 \
+              launch my-ray-cluster
 ```
 
 inside of the ray/scripts directory. Then inside the same directory,
@@ -164,4 +164,13 @@ parallel-ssh -l ubuntu -h hosts.txt "pip install theano gym"
 parallel-ssh -l ubuntu -h hosts.txt "sudo apt-get install -y pachi"
 parallel-ssh -l ubuntu -h hosts.txt "pip install pachi_py"
 parallel-ssh -l ubuntu -h hosts.txt "pip install keras tabulate"
+```
+
+Now, check out the modular_rl source code on your local machine:
+
+```
+cd ~
+git checkout https://github.com/pcmoritz/modular_rl
+cd modular_rl
+git checkout remote
 ```
