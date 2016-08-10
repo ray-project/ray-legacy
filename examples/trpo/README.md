@@ -135,7 +135,24 @@ python ec2.py --key-pair=awskey \
               launch my-ray-cluster
 ```
 
-inside of the ray/scripts directory. Then inside the same directory,
+inside of the ray/scripts directory.
+
+I recommend installing Anaconda. To do this, copy ray/scripts/nodes.txt to
+ray/scripts/hosts.txt and remove the private IP from each line (everything after
+the comma, including the comma). You can then install Anaconda on the cluster
+by running these commands inside of ray/scripts:
+
+TODO: add to hosts file here
+
+```
+ssh-add <path to .pem file>
+parallel-ssh -l ubuntu -h hosts.txt "wget http://repo.continuum.io/archive/Anaconda2-4.1.1-Linux-x86_64.sh"
+parallel-ssh -l ubuntu -h hosts.txt "bash ~/Anaconda2-4.1.1-Linux-x86_64.sh -b"
+parallel-ssh -l ubuntu -h hosts.txt 'echo -e "export PATH=\$HOME/anaconda2/bin/:\$PATH\n$(cat ~/.bashrc)" > ~/.bashrc'
+```
+
+
+Then inside the same directory,
 
 ```
 python cluster.py --nodes=nodes.txt --key-file=<path to .pem file> --username=ubuntu
@@ -143,28 +160,14 @@ python cluster.py --nodes=nodes.txt --key-file=<path to .pem file> --username=ub
 
 Inside the shell, run `cluster.install_ray()`.
 
-
-I recommend installing Anaconda. To do this, copy ray/scripts/nodes.txt to
-ray/scripts/hosts.txt and remove the private IP from each line (everything after
-the comma, including the comma). You can then install Anaconda on the cluster
-by running these commands inside of ray/scripts:
-
-```
-ssh-add <path to .pem file>
-parallel-ssh -l ubuntu -h hosts.txt "sudo apt-get install -y wget"
-parallel-ssh -l ubuntu -h hosts.txt "wget http://repo.continuum.io/archive/Anaconda2-4.1.1-Linux-x86_64.sh"
-parallel-ssh -l ubuntu -h hosts.txt "bash ~/Anaconda2-4.1.1-Linux-x86_64.sh -b"
-parallel-ssh -l ubuntu -h hosts.txt "echo 'export PATH=\$HOME/anaconda2/bin/:\$PATH' >> ~/.bashrc"
-```
+If an error occurs for any of these commands, you can get the error message by
+adding the -i flat to parallel-ssh.
 
 Install further dependencies:
 
 ```
-parallel-ssh -l ubuntu -h hosts.txt "pip install ipython typing funcsigs subprocess32 protobuf colorama graphviz cloudpickle"
-parallel-ssh -l ubuntu -h hosts.txt "pip install theano gym"
 parallel-ssh -l ubuntu -h hosts.txt "sudo apt-get install -y pachi"
-parallel-ssh -l ubuntu -h hosts.txt "pip install pachi_py"
-parallel-ssh -l ubuntu -h hosts.txt "pip install keras tabulate"
+parallel-ssh -l ubuntu -h hosts.txt  'pip install typing funcsigs subprocess32 protobuf colorama graphviz cloudpickle theano gym pachi_py keras tabulate typing'
 ```
 
 Now, check out the modular_rl source code on your local machine:
@@ -187,6 +190,7 @@ Now, ssh to the head node of your cluster (the first line of nodes.txt), edit
 with the line that `cluster.start_ray` printed. Then run
 
 ```
+source /home/ubuntu/ray/setup-env.sh
 ./run_pg.py --env Go9x9-v0 --agent modular_rl.agentzoo.TrpoAgent --video=0 \
             --remote 1 --timesteps_per_batch=2000 --hid_sizes=244,81 \
             --n_rollouts=40 --n_iter=1000
