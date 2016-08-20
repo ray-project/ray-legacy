@@ -70,7 +70,7 @@ git checkout remote
 
 You can run the code using
 ```
-./run_pg.py --env Pong-ram-v0 --agent modular_rl.agentzoo.TrpoAgent --video 0 --n_iter 500 --filter 0 --remote 1 --n_rollouts 8
+./run_pg.py --env Pong-ram-v0 --agent modular_rl.agentzoo.TrpoAgent --video 0 --n_iter 500 --filter 1 --remote 1 --n_rollouts 8
 ```
 
 There are few [changes](https://github.com/joschu/modular_rl/compare/master...pcmoritz:23d3ebc).
