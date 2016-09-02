@@ -13,5 +13,15 @@ setup(
   package_data = {
     "ray": ["libraylib.so", "scheduler", "objstore"]
   },
-  zip_safe=False
+  zip_safe=False,
+  install_requires=[
+    'cloudpickle',
+    'colorama',
+    'funcsigs',
+    'graphviz',
+    'ipython',
+    'numpy',
+    'protobuf',
+    'subprocess32',
+  ]
 )
