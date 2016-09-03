@@ -22,7 +22,11 @@ echo "building numbuf"
 cd $TP_DIR/numbuf
 ./setup.sh
 ./build.sh
-python setup.py develop --user
+if [[ "$unamestr" == "Linux" ]]; then
+  python setup.py develop --user
+elif [[ "$unamestr" == "Darwin" ]]; then
+  sudo python setup.py develop --user
+else
 
 echo "building GRPC"
 cd $TP_DIR/grpc
