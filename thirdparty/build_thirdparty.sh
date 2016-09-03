@@ -19,7 +19,6 @@ else
 fi
 
 echo "building numbuf"
-
 cd $TP_DIR/numbuf
 ./setup.sh
 ./build.sh
