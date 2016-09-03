@@ -30,7 +30,6 @@ Then run the setup scripts.
 cd ray
 ./setup.sh # Build all necessary third party libraries (e.g., gRPC and Apache Arrow). This may take about 10 minutes.
 ./build.sh # Build Ray.
-source setup-env.sh # Add Ray to your Python path.
 ```
 
 Then to install the Python package, run the following.
