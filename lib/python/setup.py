@@ -1,9 +1,8 @@
 import sys
 
-from setuptools import setup, Extension, find_packages
-import setuptools
+from setuptools import setup, find_packages
 
-# because of relative paths, this must be run from inside ray/lib/python/
+# Because of relative paths, this must be run from inside ray/lib/python/.
 
 setup(
   name = "ray",
@@ -13,15 +12,5 @@ setup(
   package_data = {
     "ray": ["libraylib.so", "scheduler", "objstore"]
   },
-  zip_safe=False,
-  install_requires=[
-    'cloudpickle',
-    'colorama',
-    'funcsigs',
-    'graphviz',
-    'ipython',
-    'numpy',
-    'protobuf',
-    'subprocess32',
-  ]
+  zip_safe=False
 )

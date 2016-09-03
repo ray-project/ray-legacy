@@ -15,6 +15,7 @@ First install the dependencies. We currently do not support Python 3.
 ```
 sudo apt-get update
 sudo apt-get install -y git cmake build-essential autoconf curl libtool python-dev python-numpy python-pip libboost-all-dev unzip graphviz
+pip install ipython funcsigs subprocess32 protobuf colorama graphviz cloudpickle
 ```
 
 ## Build
@@ -27,14 +28,13 @@ cd ray
 ./build.sh # Build Ray.
 ```
 
-To install the Python package, run
+Then to install the Python package, run the following.
 ```
 cd lib/python
 python setup.py develop --user
 ```
 This adds a reference to the current directory, so you need to leave all the
 files in place.
-
 
 ## Test if the installation succeeded
 
