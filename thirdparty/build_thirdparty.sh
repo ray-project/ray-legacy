@@ -22,14 +22,7 @@ echo "building numbuf"
 cd $TP_DIR/numbuf
 ./setup.sh
 ./build.sh
-if [[ "$unamestr" == "Linux" ]]; then
-  python setup.py develop --user
-elif [[ "$unamestr" == "Darwin" ]]; then
-  sudo python setup.py develop --user
-else
-  echo "Unrecognized platform."
-  exit 1
-fi
+python setup.py develop --user
 
 echo "building GRPC"
 cd $TP_DIR/grpc
