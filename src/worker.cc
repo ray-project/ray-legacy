@@ -378,7 +378,7 @@ void Worker::decrement_reference_count(std::vector<ObjectID> &objectids) {
       request.add_objectid(objectids[i]);
     }
     AckReply reply;
-    RAY_CHECK_GRPC(scheduler_stub_->DecrementRefCount(&context, request, &reply));
+    RAY_WARN_GRPC(scheduler_stub_->DecrementRefCount(&context, request, &reply));
   }
 }
 
