@@ -17,6 +17,6 @@ WORKDIR /home/ray-user/ray
 RUN ./setup.sh
 RUN ./build.sh
 WORKDIR /home/ray-user/ray/lib/python
-RUN setup python develop --user
+RUN python setup.py develop --user
 WORKDIR /home/ray-user/ray
 ENTRYPOINT bash
