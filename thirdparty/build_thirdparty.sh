@@ -27,6 +27,9 @@ if [[ "$unamestr" == "Linux" ]]; then
 elif [[ "$unamestr" == "Darwin" ]]; then
   sudo python setup.py develop --user
 else
+  echo "Unrecognized platform."
+  exit 1
+fi
 
 echo "building GRPC"
 cd $TP_DIR/grpc
