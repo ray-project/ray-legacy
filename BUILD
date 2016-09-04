@@ -1,4 +1,5 @@
 load("@protobuf//:protobuf.bzl", "cc_proto_library")
+load("@protobuf//:protobuf.bzl", "py_proto_library")
 
 config_setting(
     name = "darwin",
@@ -19,7 +20,13 @@ cc_proto_library(
     srcs = ["protos/types.proto"],
     default_runtime = "@protobuf//:protobuf",
     protoc = "@protobuf//:protoc",
-    use_grpc_plugin = True,
+)
+
+py_proto_library(
+    name = "types_proto_py",
+    srcs = ["protos/types.proto"],
+    default_runtime = "@protobuf//:protobuf_python",
+    protoc = "@protobuf//:protoc",
 )
 
 cc_proto_library(
@@ -27,8 +34,15 @@ cc_proto_library(
     srcs = ["protos/graph.proto"],
     default_runtime = "@protobuf//:protobuf",
     protoc = "@protobuf//:protoc",
-    use_grpc_plugin = True,
     deps = [":types_proto"],
+)
+
+py_proto_library(
+    name = "graph_proto_py",
+    srcs = ["protos/graph.proto"],
+    default_runtime = "@protobuf//:protobuf_python",
+    protoc = "@protobuf//:protoc",
+    deps = [":types_proto_py"],
 )
 
 cc_proto_library(
@@ -121,9 +135,11 @@ cc_binary(
 filegroup(
     name = "runtime",
     srcs = [
+        ":graph_proto_py",
         ":libraylib.so",
         ":objstore",
         ":scheduler",
+        ":types_proto_py",
         "@numbuf//:libnumbuf.so",
     ],
 )
