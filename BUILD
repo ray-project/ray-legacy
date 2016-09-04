@@ -42,13 +42,13 @@ cc_library(
     name = "ipc",
     srcs = ["src/ipc.cc"],
     hdrs = ["src/ipc.h"],
+    # Possibly not needed on macOS
+    linkopts = ["-lrt"],
     deps = [
         ":ray_headers",
         ":utils",
         "@grpc//:grpc++_unsecure",
     ],
-    # Possibly not needed on macOS
-    linkopts = ["-lrt"],
 )
 
 cc_library(
