@@ -54,6 +54,7 @@ cc_library(
     deps = [
         ":ray_headers",
         ":utils",
+        "@boost_archive//:boost",
         "@grpc//:grpc++_unsecure",
     ],
 )
@@ -112,7 +113,17 @@ cc_binary(
         ":ipc",
         ":ray_proto",
         ":utils",
-        "@python//:python_headers",
         "@python//:numpy_headers",
+        "@python//:python_headers",
+    ],
+)
+
+filegroup(
+    name = "runtime",
+    srcs = [
+        ":libraylib.so",
+        ":objstore",
+        ":scheduler",
+        "@numbuf//:libnumbuf.so",
     ],
 )
