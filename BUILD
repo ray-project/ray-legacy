@@ -1,5 +1,10 @@
 load("@protobuf//:protobuf.bzl", "cc_proto_library")
 
+config_setting(
+    name = "darwin",
+    values = {"cpu": "darwin"},
+)
+
 cc_library(
     name = "ray_headers",
     srcs = [
@@ -42,8 +47,10 @@ cc_library(
     name = "ipc",
     srcs = ["src/ipc.cc"],
     hdrs = ["src/ipc.h"],
-    # Possibly not needed on macOS
-    linkopts = ["-lrt"],
+    linkopts = select({
+        ":darwin": [],
+        "//conditions:default": ["-lrt"],
+    }),
     deps = [
         ":ray_headers",
         ":utils",
@@ -106,5 +113,6 @@ cc_binary(
         ":ray_proto",
         ":utils",
         "@python//:python_headers",
+        "@python//:numpy_headers",
     ],
 )
