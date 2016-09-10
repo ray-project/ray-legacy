@@ -706,11 +706,13 @@ def connect(node_ip_address, scheduler_address, objstore_address=None, worker=gl
   # properly shutdown the driver's worker service, so we are temporarily using
   # this implementation which constantly queries the scheduler for new error
   # messages.
+  """
   if mode == raylib.SCRIPT_MODE:
     t = threading.Thread(target=print_error_messages, args=(worker,))
     # Making the thread a daemon causes it to exit when the main thread exits.
     t.daemon = True
     t.start()
+  """
   worker.set_mode(mode)
   FORMAT = "%(asctime)-15s %(message)s"
   # Configure the Python logging module. Note that if we do not provide our own
