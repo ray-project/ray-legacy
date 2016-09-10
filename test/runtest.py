@@ -595,6 +595,10 @@ class PythonCExtensionTest(unittest.TestCase):
   def testReferenceCountFalse(self):
     ray.init(start_ray_local=True, num_workers=1)
 
+    print "IN RUNTEST.PY 111, REFCOUNT IS {}".format(sys.getrefcount(False))
+    ray.put(800)
+    print "IN RUNTEST.PY 222, REFCOUNT IS {}".format(sys.getrefcount(False))
+
     # Make sure that we aren't accidentally messing up Python's reference counts.
     @ray.remote
     def f():
