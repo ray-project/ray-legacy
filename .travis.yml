@@ -17,4 +17,4 @@ install:
 
 script:
   - source setup-env.sh
-  - python test/refcount_tets.py
+  - python test/refcount_test.py
