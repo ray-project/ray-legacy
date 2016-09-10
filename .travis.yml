@@ -16,4 +16,5 @@ install:
   - ./test/travis-ci/install.sh
 
 script:
-  - ./test/travis-ci/run_test.sh --docker-image=amplab/ray:test-base 'source setup-env.sh && cd test && python runtest.py'
+  - source setup-env.sh
+  - python test/refcount_tets.py

@@ -24,5 +24,4 @@ else
   # Mac OS X test
   ./install-dependencies.sh
   ./setup.sh
-  ./build.sh
 fi
