@@ -1044,8 +1044,8 @@ def main_loop(worker=global_worker):
         _logger().info("Reached the end of the if-else loop in the main loop. This should be unreachable.")
         assert False, "This code should be unreachable."
     finally:
-      # Allow releasing the variables BEFORE we wait for the next message or exit the block
-      del command_args
+      # Allow releasing the variables BEFORE we wait for the next message.
+      del command, command_args
 
 def _submit_task(func_name, args, worker=global_worker):
   """This is a wrapper around worker.submit_task.
