@@ -7,9 +7,9 @@ import sys
 from collections import namedtuple
 import libnumbuf
 
-import test_functions
-import ray.array.remote as ra
-import ray.array.distributed as da
+#import test_functions
+#import ray.array.remote as ra
+#import ray.array.distributed as da
 
 def assert_equal(obj1, obj2):
   if type(obj1).__module__ == np.__name__ or type(obj2).__module__ == np.__name__:
@@ -110,6 +110,7 @@ except AttributeError:
   cloudpickle_command = "sudo pip install --upgrade git+git://github.com/cloudpipe/cloudpickle.git@0d225a4695f1f65ae1cbb2e0bbc145e10167cce4"
   raise Exception("You have an older version of cloudpickle that is not able to serialize namedtuples. Try running \n\n{}\n\n".format(cloudpickle_command))
 
+"""
 class ObjStoreTest(unittest.TestCase):
 
   # Test setting up object stores, transfering data between them and retrieving data to a client
@@ -559,9 +560,11 @@ class PythonModeTest(unittest.TestCase):
     assert_equal(bref, np.array([1, 0]))
 
     ray.worker.cleanup()
+"""
 
 class PythonCExtensionTest(unittest.TestCase):
 
+  """
   def testReferenceCountNone(self):
     ray.init(start_ray_local=True, num_workers=1)
 
@@ -587,6 +590,7 @@ class PythonCExtensionTest(unittest.TestCase):
     self.assertEqual(first_count, second_count)
 
     ray.worker.cleanup()
+  """
 
   def testReferenceCountFalse(self):
     ray.init(start_ray_local=True, num_workers=1)
@@ -601,6 +605,7 @@ class PythonCExtensionTest(unittest.TestCase):
 
     ray.worker.cleanup()
 
+"""
 class ReusablesTest(unittest.TestCase):
 
   def testReusables(self):
@@ -716,6 +721,7 @@ class ClusterAttachingTest(unittest.TestCase):
     self.assertEqual(ray.get(f.remote(0)), 1)
 
     ray.worker.cleanup()
+"""
 
 if __name__ == "__main__":
   unittest.main(verbosity=2)
