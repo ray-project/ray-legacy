@@ -575,7 +575,7 @@ class PythonCExtensionTest(unittest.TestCase):
 
     ray.worker.cleanup()
 
-  def testReferenceCountNone(self):
+  def testReferenceCountTrue(self):
     ray.init(start_ray_local=True, num_workers=1)
 
     # Make sure that we aren't accidentally messing up Python's reference counts.
@@ -588,7 +588,7 @@ class PythonCExtensionTest(unittest.TestCase):
 
     ray.worker.cleanup()
 
-  def testReferenceCountNone(self):
+  def testReferenceCountFalse(self):
     ray.init(start_ray_local=True, num_workers=1)
 
     # Make sure that we aren't accidentally messing up Python's reference counts.
