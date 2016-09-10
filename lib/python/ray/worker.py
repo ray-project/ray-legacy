@@ -362,10 +362,13 @@ class Worker(object):
     print "TRUE REF COUNT YYY666 = {}".format(sys.getrefcount(False))
     # write the metadata length
     np.frombuffer(buff, dtype="int64", count=1)[0] = len(schema)
+    print "TRUE REF COUNT YYY666aaa = {}".format(sys.getrefcount(False))
     # metadata buffer
     metadata = np.frombuffer(buff, dtype="byte", offset=8, count=len(schema))
+    print "TRUE REF COUNT YYY666bbb = {}".format(sys.getrefcount(False))
     # write the metadata
     metadata[:] = schema
+    print "TRUE REF COUNT YYY666ccc = {}".format(sys.getrefcount(False))
     data = np.frombuffer(buff, dtype="byte")[8 + len(schema):]
     print "TRUE REF COUNT YYY777 = {}".format(sys.getrefcount(False))
     metadata_offset = libnumbuf.write_to_buffer(serialized, memoryview(data))
