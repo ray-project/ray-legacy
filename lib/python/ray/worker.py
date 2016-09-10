@@ -344,16 +344,22 @@ class Worker(object):
     """
     # We put the value into a list here because in arrow the concept of
     # "serializing a single object" does not exits.
+    print "TRUE REF COUNT YYY111 = {}".format(sys.getrefcount(False))
     schema, size, serialized = numbuf_serialize(value)
+    print "TRUE REF COUNT YYY222 = {}".format(sys.getrefcount(False))
     global contained_objectids
+    print "TRUE REF COUNT YYY333 = {}".format(sys.getrefcount(False))
     raylib.add_contained_objectids(self.handle, objectid, contained_objectids)
+    print "TRUE REF COUNT YYY444 = {}".format(sys.getrefcount(False))
     contained_objectids = []
     # TODO(pcm): Right now, metadata is serialized twice, change that in the future
     # in the following line, the "8" is for storing the metadata size,
     # the len(schema) is for storing the metadata and the 8192 is for storing
     # the metadata in the batch (see INITIAL_METADATA_SIZE in arrow)
     size = size + 8 + len(schema) + 4096 * 4
+    print "TRUE REF COUNT YYY555 = {}".format(sys.getrefcount(False))
     buff, segmentid = raylib.allocate_buffer(self.handle, objectid, size)
+    print "TRUE REF COUNT YYY666 = {}".format(sys.getrefcount(False))
     # write the metadata length
     np.frombuffer(buff, dtype="int64", count=1)[0] = len(schema)
     # metadata buffer
@@ -361,8 +367,11 @@ class Worker(object):
     # write the metadata
     metadata[:] = schema
     data = np.frombuffer(buff, dtype="byte")[8 + len(schema):]
+    print "TRUE REF COUNT YYY777 = {}".format(sys.getrefcount(False))
     metadata_offset = libnumbuf.write_to_buffer(serialized, memoryview(data))
+    print "TRUE REF COUNT YYY888 = {}".format(sys.getrefcount(False))
     raylib.finish_buffer(self.handle, objectid, segmentid, metadata_offset)
+    print "TRUE REF COUNT YYY999 = {}".format(sys.getrefcount(False))
 
   def get_object(self, objectid):
     """Get the value in the local object store associated with objectid.
@@ -1301,4 +1310,6 @@ def store_outputs_in_objstore(objectids, outputs, worker=global_worker):
     if isinstance(outputs[i], raylib.ObjectID):
       raise Exception("This remote function returned an ObjectID as its {}th return value. This is not allowed.".format(i))
   for i in range(len(objectids)):
+    print "TRUE REF COUNT XXXaaa = {}".format(sys.getrefcount(False))
     worker.put_object(objectids[i], outputs[i])
+    print "TRUE REF COUNT XXXbbb = {}".format(sys.getrefcount(False))
