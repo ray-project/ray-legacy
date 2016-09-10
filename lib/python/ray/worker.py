@@ -935,13 +935,20 @@ def main_loop(worker=global_worker):
     After the task executes, the worker resets any reusable variables that were
     accessed by the task.
     """
+    print "---- ENTERING PROCESS_TASK"
+    print "TRUE REF COUNT lll = {}".format(sys.getrefcount(False))
     function_name, args, return_objectids = task
+    print "TRUE REF COUNT mmm = {}".format(sys.getrefcount(False))
     try:
+      print "TRUE REF COUNT nnn = {}".format(sys.getrefcount(False))
       arguments = get_arguments_for_execution(worker.functions[function_name], args, worker) # get args from objstore
+      print "TRUE REF COUNT ooo = {}".format(sys.getrefcount(False))
       outputs = worker.functions[function_name].executor(arguments) # execute the function
+      print "TRUE REF COUNT ppp = {}".format(sys.getrefcount(False))
       if len(return_objectids) == 1:
         outputs = (outputs,)
       store_outputs_in_objstore(return_objectids, outputs, worker) # store output in local object store
+      print "TRUE REF COUNT qqq = {}".format(sys.getrefcount(False))
     except Exception as e:
       # If the task threw an exception, then record the traceback. We determine
       # whether the exception was thrown in the task execution by whether the
@@ -955,22 +962,30 @@ def main_loop(worker=global_worker):
       _logger().info("While running function {}, worker threw exception with message: \n\n{}\n".format(function_name, str(failure_object)))
     # Notify the scheduler that the task is done. This happens regardless of
     # whether the task succeeded or failed.
+    print "TRUE REF COUNT rrr = {}".format(sys.getrefcount(False))
     raylib.ready_for_new_task(worker.handle)
+    print "TRUE REF COUNT sss = {}".format(sys.getrefcount(False))
     try:
       # Reinitialize the values of reusable variables that were used in the task
       # above so that changes made to their state do not affect other tasks.
+      print "TRUE REF COUNT ttt = {}".format(sys.getrefcount(False))
       reusables._reinitialize()
+      print "TRUE REF COUNT uuu = {}".format(sys.getrefcount(False))
     except Exception as e:
       # The attempt to reinitialize the reusable variables threw an exception.
       # We record the traceback and notify the scheduler.
       traceback_str = format_error_message(traceback.format_exc())
       raylib.notify_failure(worker.handle, function_name, traceback_str, raylib.FailedReinitializeReusableVariable)
       _logger().info("While attempting to reinitialize the reusable variables after running function {}, the worker threw exception with message: \n\n{}\n".format(function_name, traceback_str))
+    print "TRUE REF COUNT vvv = {}".format(sys.getrefcount(False))
 
   def process_remote_function(function_name, serialized_function):
     """Import a remote function."""
+    print "---- ENTERING PROCESS_REMOTE_FUNCTION"
     try:
+      print "TRUE REF COUNT 111 = {}".format(sys.getrefcount(False))
       function, num_return_vals, module = pickling.loads(serialized_function)
+      print "TRUE REF COUNT 222 = {}".format(sys.getrefcount(False))
     except:
       # If an exception was thrown when the remote function was imported, we
       # record the traceback and notify the scheduler of the failure.
@@ -979,6 +994,7 @@ def main_loop(worker=global_worker):
       # Notify the scheduler that the remote function failed to import.
       raylib.notify_failure(worker.handle, function_name, traceback_str, raylib.FailedRemoteFunctionImport)
     else:
+      print "TRUE REF COUNT aaa = {}".format(sys.getrefcount(False))
       # TODO(rkn): Why is the below line necessary?
       function.__module__ = module
       assert function_name == "{}.{}".format(function.__module__, function.__name__), "The remote function name does not match the name that was passed in."
@@ -986,10 +1002,13 @@ def main_loop(worker=global_worker):
       _logger().info("Successfully imported remote function {}.".format(function_name))
       # Noify the scheduler that the remote function imported successfully.
       # We pass an empty error message string because the import succeeded.
+      print "TRUE REF COUNT bbb = {}".format(sys.getrefcount(False))
       raylib.register_remote_function(worker.handle, function_name, num_return_vals)
+      print "TRUE REF COUNT ccc = {}".format(sys.getrefcount(False))
 
   def process_reusable_variable(reusable_variable_name, initializer_str, reinitializer_str):
     """Import a reusable variable."""
+    print "---- ENTERING PROCESS_REUSABLE_VARIABLE"
     try:
       initializer = pickling.loads(initializer_str)
       reinitializer = pickling.loads(reinitializer_str)
@@ -1006,11 +1025,15 @@ def main_loop(worker=global_worker):
 
   def process_function_to_run(serialized_function):
     """Run on arbitrary function on the worker."""
+    print "---- ENTERING PROCESS_FUNCTION_TO_RUN"
     try:
+      print "TRUE REF COUNT AAA = {}".format(sys.getrefcount(False))
       # Deserialize the function.
       function = pickling.loads(serialized_function)
+      print "TRUE REF COUNT BBB = {}".format(sys.getrefcount(False))
       # Run the function.
       function(worker)
+      print "TRUE REF COUNT CCC = {}".format(sys.getrefcount(False))
     except:
       # If an exception was thrown when the function was run, we record the
       # traceback and notify the scheduler of the failure.
@@ -1020,32 +1043,50 @@ def main_loop(worker=global_worker):
       name = function.__name__  if "function" in locals() and hasattr(function, "__name__") else ""
       raylib.notify_failure(worker.handle, name, traceback_str, raylib.FailedFunctionToRun)
     else:
+      print "TRUE REF COUNT DDD = {}".format(sys.getrefcount(False))
       _logger().info("Successfully ran function on worker.")
+      print "TRUE REF COUNT EEE = {}".format(sys.getrefcount(False))
 
   while True:
+    print "------------- TOP OF MAIN_LOOP"
+    print "TRUE REF COUNT x111 = {}".format(sys.getrefcount(False))
     command, command_args = raylib.wait_for_next_message(worker.handle)
+    print "TRUE REF COUNT x222 = {}".format(sys.getrefcount(False))
     try:
       if command == "die":
         # We use this as a mechanism to allow the scheduler to kill workers.
         _logger().info("Received a 'die' command, and will exit now.")
         break
       elif command == "task":
+        print "TRUE REF COUNT x333 = {}".format(sys.getrefcount(False))
         process_task(command_args)
+        print "TRUE REF COUNT x444 = {}".format(sys.getrefcount(False))
       elif command == "function":
+        print "TRUE REF COUNT x555 = {}".format(sys.getrefcount(False))
         function_name, serialized_function = command_args
+        print "TRUE REF COUNT x666 = {}".format(sys.getrefcount(False))
         process_remote_function(function_name, serialized_function)
+        print "TRUE REF COUNT x777 = {}".format(sys.getrefcount(False))
       elif command == "reusable_variable":
         name, initializer_str, reinitializer_str = command_args
         process_reusable_variable(name, initializer_str, reinitializer_str)
       elif command == "function_to_run":
+        print "TRUE REF COUNT x888 = {}".format(sys.getrefcount(False))
         serialized_function = command_args
+        print "TRUE REF COUNT x999 = {}".format(sys.getrefcount(False))
         process_function_to_run(serialized_function)
+        print "TRUE REF COUNT xaaa = {}".format(sys.getrefcount(False))
       else:
         _logger().info("Reached the end of the if-else loop in the main loop. This should be unreachable.")
         assert False, "This code should be unreachable."
     finally:
       # Allow releasing the variables BEFORE we wait for the next message.
-      del command, command_args
+      print "TRUE REF COUNT xbbb = {}".format(sys.getrefcount(False))
+      del command
+      print "TRUE REF COUNT xccc = {}".format(sys.getrefcount(False))
+      del command_args
+      print "TRUE REF COUNT xddd = {}".format(sys.getrefcount(False))
+    print "TRUE REF COUNT xeee = {}".format(sys.getrefcount(False))
 
 def _submit_task(func_name, args, worker=global_worker):
   """This is a wrapper around worker.submit_task.
