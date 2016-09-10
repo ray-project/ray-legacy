@@ -345,13 +345,9 @@ class Worker(object):
     # We put the value into a list here because in arrow the concept of
     # "serializing a single object" does not exits.
     print "TRUE REF COUNT YYY111 = {}".format(sys.getrefcount(False))
-    schema, size, serialized = numbuf_serialize(value)
+    schema, size, serialized = libnumbuf.serialize_list([value])
     print "TRUE REF COUNT YYY222 = {}".format(sys.getrefcount(False))
-    global contained_objectids
-    print "TRUE REF COUNT YYY333 = {}".format(sys.getrefcount(False))
-    raylib.add_contained_objectids(self.handle, objectid, contained_objectids)
     print "TRUE REF COUNT YYY444 = {}".format(sys.getrefcount(False))
-    contained_objectids = []
     # TODO(pcm): Right now, metadata is serialized twice, change that in the future
     # in the following line, the "8" is for storing the metadata size,
     # the len(schema) is for storing the metadata and the 8192 is for storing
