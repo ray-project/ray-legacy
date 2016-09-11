@@ -45,6 +45,7 @@ find_package(Boost REQUIRED)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 include_directories("${CMAKE_SOURCE_DIR}/include")
+include_directories("${CMAKE_SOURCE_DIR}/thirdparty/")
 include_directories("${CMAKE_SOURCE_DIR}/thirdparty/grpc/include/")
 include_directories("${CMAKE_SOURCE_DIR}/thirdparty/grpc/third_party/protobuf/src")
 include_directories("${PYTHON_INCLUDE_DIRS}")

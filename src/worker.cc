@@ -109,12 +109,17 @@ Status WorkerServiceImpl::PrintErrorMessage(ServerContext* context, const PrintE
   return Status::OK;
 }
 
-Worker::Worker(const std::string& node_ip_address, const std::string& scheduler_address, Mode mode)
+Worker::Worker(const std::string& node_ip_address, const std::string& scheduler_address, const std::string& redis_host, int redis_port, Mode mode)
     : scheduler_address_(scheduler_address),
       node_ip_address_(node_ip_address),
       mode_(mode) {
   auto scheduler_channel = grpc::CreateChannel(scheduler_address, grpc::InsecureChannelCredentials());
   scheduler_stub_ = Scheduler::NewStub(scheduler_channel);
+
+  redis_ = redisConnect(redis_host.c_str(), redis_port);
+
+  start_redis_thread();
+
   // Generate a random string to use for naming the message queue to avoid
   // collisions with message queues created by other workers.
   std::random_device rd;
@@ -494,4 +499,19 @@ void Worker::start_worker_service(Mode mode) {
     RAY_LOG(RAY_INFO, "Looping while waiting for the worker service to start.");
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
+}
+
+void Worker::start_redis_thread() {
+  redis_thread_ = std::thread([this]() {
+    int counter = 0;
+    while (true) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(200));
+      std::string command = "LINDEX RemoteFunctions " + std::to_string(counter);
+
+      redisReply* reply = static_cast<redisReply*>(redisCommand(redis_, command.c_str()));
+
+      std::cout << "RESULT IS " << reply->str << std::endl;
+      freeReplyObject(reply);
+    }
+  });
 }

@@ -647,12 +647,14 @@ static PyObject* deserialize_task(PyObject* worker_capsule, const Task& task) {
 static PyObject* create_worker(PyObject* self, PyObject* args) {
   const char* node_ip_address;
   const char* scheduler_address;
+  const char* redis_host;
+  int redis_port;
   // The object store address can be the empty string, in which case the
   // scheduler will choose the object store address.
   const char* objstore_address;
   int mode;
   const char* log_file_name;
-  if (!PyArg_ParseTuple(args, "sssis", &node_ip_address, &scheduler_address, &objstore_address, &mode, &log_file_name)) {
+  if (!PyArg_ParseTuple(args, "sssisis", &node_ip_address, &scheduler_address, &redis_host, &redis_port, &objstore_address, &mode, &log_file_name)) {
     return NULL;
   }
   // Set the logging file.
@@ -661,7 +663,7 @@ static PyObject* create_worker(PyObject* self, PyObject* args) {
   global_ray_config.logfile.open(log_file_name);
   // Create the worker.
   bool is_driver = (mode != Mode::WORKER_MODE);
-  Worker* worker = new Worker(std::string(node_ip_address), std::string(scheduler_address), static_cast<Mode>(mode));
+  Worker* worker = new Worker(std::string(node_ip_address), std::string(scheduler_address), std::string(redis_host), redis_port, static_cast<Mode>(mode));
   // Register the worker.
   worker->register_worker(std::string(node_ip_address), std::string(objstore_address), is_driver);
 

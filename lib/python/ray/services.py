@@ -23,6 +23,9 @@ TIMEOUT_SECONDS = 5
 def address(host, port):
   return host + ":" + str(port)
 
+def new_redis_port():
+  return random.randint(10000, 65535)
+
 def new_scheduler_port():
   return random.randint(10000, 65535)
 
@@ -54,6 +57,11 @@ def cleanup():
     print "Ray did not shut down properly."
   all_processes = []
 
+def start_redis(port):
+  p = subprocess.Popen(["redis-server", "--port", str(port)])
+  if cleanup:
+    all_processes.append(p)
+
 def start_scheduler(scheduler_address, cleanup):
   """This method starts a scheduler process.
 
@@ -84,7 +92,7 @@ def start_objstore(scheduler_address, node_ip_address, cleanup):
   if cleanup:
     all_processes.append(p)
 
-def start_worker(node_ip_address, worker_path, scheduler_address, objstore_address=None, cleanup=True):
+def start_worker(node_ip_address, redis_address, worker_path, scheduler_address, objstore_address=None, cleanup=True):
   """This method starts a worker process.
 
   Args:
@@ -102,14 +110,15 @@ def start_worker(node_ip_address, worker_path, scheduler_address, objstore_addre
   command = ["python",
              worker_path,
              "--node-ip-address=" + node_ip_address,
-             "--scheduler-address=" + scheduler_address]
+             "--scheduler-address=" + scheduler_address,
+             "--redis-address=" + redis_address]
   if objstore_address is not None:
     command.append("--objstore-address=" + objstore_address)
   p = subprocess.Popen(command)
   if cleanup:
     all_processes.append(p)
 
-def start_node(scheduler_address, node_ip_address, num_workers, worker_path=None, cleanup=False):
+def start_node(scheduler_address, redis_address, node_ip_address, num_workers, worker_path=None, cleanup=False):
   """Start an object store and associated workers in the cluster setting.
 
   This starts an object store and the associated workers when Ray is being used
@@ -131,7 +140,7 @@ def start_node(scheduler_address, node_ip_address, num_workers, worker_path=None
   if worker_path is None:
     worker_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../scripts/default_worker.py")
   for _ in range(num_workers):
-    start_worker(node_ip_address, worker_path, scheduler_address, cleanup=cleanup)
+    start_worker(node_ip_address, redis_address, worker_path, scheduler_address, cleanup=cleanup)
   time.sleep(0.5)
 
 def start_workers(scheduler_address, objstore_address, num_workers, worker_path):
@@ -174,6 +183,9 @@ def start_ray_local(node_ip_address="127.0.0.1", num_objstores=1, num_workers=0,
     worker_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../scripts/default_worker.py")
   if num_objstores < 1:
     raise Exception("`num_objstores` is {}, but should be at least 1.".format(num_objstores))
+  redis_port = new_redis_port()
+  redis_address = address(node_ip_address, redis_port)
+  start_redis(redis_port)
   scheduler_address = address(node_ip_address, new_scheduler_port())
   start_scheduler(scheduler_address, cleanup=True)
   time.sleep(0.1)
@@ -188,7 +200,7 @@ def start_ray_local(node_ip_address="127.0.0.1", num_objstores=1, num_workers=0,
       # remaining number of workers.
       num_workers_to_start = num_workers - (num_objstores - 1) * (num_workers / num_objstores)
     for _ in range(num_workers_to_start):
-      start_worker(node_ip_address, worker_path, scheduler_address, cleanup=True)
+      start_worker(node_ip_address, redis_address, worker_path, scheduler_address, cleanup=True)
     time.sleep(0.3)
 
-  return scheduler_address
+  return scheduler_address, redis_address

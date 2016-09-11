@@ -11,6 +11,7 @@ import atexit
 import threading
 import string
 import weakref
+import redis
 
 # Ray modules
 import config
@@ -622,7 +623,7 @@ def init(start_ray_local=False, num_workers=None, num_objstores=None, scheduler_
     num_objstores = 1 if num_objstores is None else num_objstores
     # Start the scheduler, object store, and some workers. These will be killed
     # by the call to cleanup(), which happens when the Python script exits.
-    scheduler_address = services.start_ray_local(num_objstores=num_objstores, num_workers=num_workers, worker_path=None)
+    scheduler_address, redis_address = services.start_ray_local(num_objstores=num_objstores, num_workers=num_workers, worker_path=None)
   else:
     # In this case, there is an existing scheduler and object store, and we do
     # not need to start any processes.
@@ -633,8 +634,8 @@ def init(start_ray_local=False, num_workers=None, num_objstores=None, scheduler_
   # Connect this driver to the scheduler and object store. The corresponing call
   # to disconnect will happen in the call to cleanup() when the Python script
   # exits.
-  connect(node_ip_address, scheduler_address, worker=global_worker, mode=driver_mode)
-  return scheduler_address
+  connect(node_ip_address, scheduler_address, redis_address, worker=global_worker, mode=driver_mode)
+  return scheduler_address, redis_address
 
 def cleanup(worker=global_worker):
   """Disconnect the driver, and terminate any processes started in init.
@@ -685,7 +686,7 @@ def print_error_messages(worker=global_worker):
       pass
     time.sleep(0.2)
 
-def connect(node_ip_address, scheduler_address, objstore_address=None, worker=global_worker, mode=raylib.WORKER_MODE):
+def connect(node_ip_address, scheduler_address, redis_address, objstore_address=None, worker=global_worker, mode=raylib.WORKER_MODE):
   """Connect this worker to the scheduler and an object store.
 
   Args:
@@ -704,6 +705,10 @@ def connect(node_ip_address, scheduler_address, objstore_address=None, worker=gl
     worker.mode = raylib.PYTHON_MODE
     return
 
+  redis_host, redis_port = redis_address.split(":")
+  redis_port = int(redis_port)
+  worker.redis = redis.StrictRedis(host=redis_host, port=redis_port)
+
   worker.scheduler_address = scheduler_address
   random_string = "".join(np.random.choice(list(string.ascii_uppercase + string.digits)) for _ in range(10))
   cpp_log_file_name = config.get_log_file_path("-".join(["worker", random_string, "c++"]) + ".log")
@@ -711,7 +716,7 @@ def connect(node_ip_address, scheduler_address, objstore_address=None, worker=gl
   # Create a worker object. This also creates the worker service, which can
   # receive commands from the scheduler. This call also sets up a queue between
   # the worker and the worker service.
-  worker.handle, worker.worker_address = raylib.create_worker(node_ip_address, scheduler_address, objstore_address if objstore_address is not None else "", mode, cpp_log_file_name)
+  worker.handle, worker.worker_address = raylib.create_worker(node_ip_address, scheduler_address, redis_host, redis_port, objstore_address if objstore_address is not None else "", mode, cpp_log_file_name)
   # If this is a driver running in SCRIPT_MODE, start a thread to print error
   # messages asynchronously in the background. Ideally the scheduler would push
   # messages to the driver's worker service, but we ran into bugs when trying to
@@ -746,6 +751,7 @@ def connect(node_ip_address, scheduler_address, objstore_address=None, worker=gl
     # Export cached remote functions to the workers.
     for function_name, function_to_export in worker.cached_remote_functions:
       raylib.export_remote_function(worker.handle, function_name, function_to_export)
+      worker.redis.rpush("RemoteFunctions", to_export)
     # Export cached reusable variables to the workers.
     for name, reusable_variable in reusables._cached_reusables:
       _export_reusable_variable(name, reusable_variable)
@@ -1166,6 +1172,7 @@ def remote(*args, **kwargs):
           else: del func.__globals__[func.__name__]
       if worker.mode in [raylib.SCRIPT_MODE, raylib.SILENT_MODE]:
         raylib.export_remote_function(worker.handle, func_name, to_export)
+        worker.redis.rpush("RemoteFunctions", to_export)
       elif worker.mode is None:
         worker.cached_remote_functions.append((func_name, to_export))
       return func_invoker

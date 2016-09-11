@@ -6,6 +6,7 @@
 #include <string>
 #include <thread>
 
+#include <hiredis/hiredis.h>
 #include <grpc++/grpc++.h>
 
 #include <Python.h>
@@ -48,7 +49,7 @@ private:
 
 class Worker {
  public:
-  Worker(const std::string& node_ip_address, const std::string& scheduler_address, Mode mode);
+  Worker(const std::string& node_ip_address, const std::string& scheduler_address, const std::string& redis_host, int redis_port, Mode mode);
 
   // Submit a remote task to the scheduler. If the function in the task is not
   // registered with the scheduler, we will sleep for retry_wait_milliseconds
@@ -89,6 +90,8 @@ class Worker {
   // the Python interpreter. For drivers, these commands are only for printing
   // error messages.
   void start_worker_service(Mode mode);
+  // Start the Redis client.
+  void start_redis_thread();
   // wait for next task from the RPC system. If null, it means there are no more tasks and the worker should shut down.
   std::unique_ptr<WorkerMessage> receive_next_message();
   // Tell the scheduler that the worker is ready for a new task.
@@ -119,6 +122,7 @@ class Worker {
   std::unique_ptr<Scheduler::Stub> scheduler_stub_;
   Server* server_ptr_;
   std::thread worker_server_thread_;
+  std::thread redis_thread_;
   bip::managed_shared_memory segment_;
   WorkerId workerid_;
   ObjStoreId objstoreid_;
@@ -140,6 +144,8 @@ class Worker {
   // queue is created by this worker.
   MessageQueue<ObjHandle> receive_obj_queue_;
   std::shared_ptr<MemorySegmentPool> segmentpool_;
+  redisContext* redis_;
+
 };
 
 #endif
