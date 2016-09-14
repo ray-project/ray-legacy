@@ -39,9 +39,9 @@ struct WorkerHandle {
   ObjStoreId objstoreid;
   std::string worker_address;
   // This field is initialized to false, and it is set to true after all of the
-  // exported functions and exported reusable variables have been shipped to
-  // this worker.
-  bool initialized;
+  // remote functions, reusable variables, and functions to run have been added
+  // to the appropriate queues to be exported to this worker.
+  bool exports_added_to_queue;
   OperationId current_task;
 };
 
@@ -158,6 +158,13 @@ private:
   void export_function_to_worker(WorkerId workerid, int function_index, MySynchronizedPtr<std::vector<WorkerHandle> > &workers, const MySynchronizedPtr<std::vector<std::unique_ptr<Function> > > &exported_functions);
   // Export a reusable variable to a worker
   void export_reusable_variable_to_worker(WorkerId workerid, int reusable_variable_index, MySynchronizedPtr<std::vector<WorkerHandle> > &workers, const MySynchronizedPtr<std::vector<std::unique_ptr<ReusableVar> > > &exported_reusable_variables);
+  // Add all of the exports to the appropriate queues to be exported to the
+  // workers that need them. This includes remote functions, reusable variables,
+  // and functions to run. Later it will be important to guarantee that these
+  // all happen in the same order, but for now it may be good enough to
+  // guarantee that we export the functions to run first because those set the
+  // PYTHONPATH which is needed to unpickle the remote functions.
+  void add_all_exports_to_export_queues_if_necessary(MySynchronizedPtr<std::vector<WorkerHandle> > &workers);
   // Add to the function to run export queue the job of exporting all functions
   // to run to the given worker. This is used when a new worker registers.
   void add_all_functions_to_run_to_worker_queue(WorkerId workerid);

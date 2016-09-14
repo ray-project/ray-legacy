@@ -279,7 +279,7 @@ Status SchedulerService::RegisterWorker(ServerContext* context, const RegisterWo
     (*workers)[workerid].objstoreid = objstoreid;
     (*workers)[workerid].worker_stub = WorkerService::NewStub(channel);
     (*workers)[workerid].worker_address = worker_address;
-    (*workers)[workerid].initialized = false;
+    (*workers)[workerid].exports_added_to_queue = false;
     if (is_driver) {
       (*workers)[workerid].current_task = ROOT_OPERATION; // We use this field to identify which workers are drivers.
     } else {
@@ -381,21 +381,6 @@ Status SchedulerService::ReadyForNewTask(ServerContext* context, const ReadyForN
     OperationId operationid = (*workers)[workerid].current_task;
     RAY_LOG(RAY_INFO, "worker " << workerid << " is ready for a new task");
     RAY_CHECK(operationid != ROOT_OPERATION, "A driver appears to have called ReadyForNewTask.");
-    {
-      // Check if the worker has been initialized yet, and if not, then give it
-      // all of the exported functions and all of the exported reusable variables.
-      if (!(*workers)[workerid].initialized) {
-        // This should only happen once.
-        // Queue up all functions to run on the worker.
-        add_all_functions_to_run_to_worker_queue(workerid);
-        // Queue up all remote functions to be imported on the worker.
-        add_all_remote_functions_to_worker_export_queue(workerid);
-        // Queue up all reusable variables to be imported on the worker.
-        add_all_reusable_variables_to_worker_export_queue(workerid);
-        // Mark the worker as initialized.
-        (*workers)[workerid].initialized = true;
-      }
-    }
     (*workers)[workerid].current_task = NO_OPERATION; // clear operation ID
   }
   GET(avail_workers_)->push_back(workerid);
@@ -545,6 +530,7 @@ Status SchedulerService::KillWorkers(ServerContext* context, const KillWorkersRe
 Status SchedulerService::RunFunctionOnAllWorkers(ServerContext* context, const RunFunctionOnAllWorkersRequest* request, AckReply* reply) {
   {
     auto workers = GET(workers_);
+    add_all_exports_to_export_queues_if_necessary(workers);
     auto function_to_run_queue = GET(function_to_run_queue_);
     auto exported_functions_to_run = GET(exported_functions_to_run_);
     exported_functions_to_run->push_back(std::unique_ptr<Function>(new Function(request->function())));
@@ -561,6 +547,7 @@ Status SchedulerService::RunFunctionOnAllWorkers(ServerContext* context, const R
 Status SchedulerService::ExportRemoteFunction(ServerContext* context, const ExportRemoteFunctionRequest* request, AckReply* reply) {
   {
     auto workers = GET(workers_);
+    add_all_exports_to_export_queues_if_necessary(workers);
     auto remote_function_export_queue = GET(remote_function_export_queue_);
     auto exported_functions = GET(exported_functions_);
     // TODO(rkn): Does this do a deep copy?
@@ -579,6 +566,7 @@ Status SchedulerService::ExportRemoteFunction(ServerContext* context, const Expo
 Status SchedulerService::ExportReusableVariable(ServerContext* context, const ExportReusableVariableRequest* request, AckReply* reply) {
   {
     auto workers = GET(workers_);
+    add_all_exports_to_export_queues_if_necessary(workers);
     auto reusable_variable_export_queue = GET(reusable_variable_export_queue_);
     auto exported_reusable_variables = GET(exported_reusable_variables_);
     // TODO(rkn): Does this do a deep copy?
@@ -1172,6 +1160,23 @@ void SchedulerService::export_reusable_variable_to_worker(WorkerId workerid, int
   request.mutable_reusable_variable()->CopyFrom(*(*exported_reusable_variables)[reusable_variable_index].get());
   AckReply reply;
   RAY_CHECK_GRPC((*workers)[workerid].worker_stub->ImportReusableVariable(&context, request, &reply));
+}
+
+void SchedulerService::add_all_exports_to_export_queues_if_necessary(MySynchronizedPtr<std::vector<WorkerHandle> > &workers) {
+  for (WorkerId workerid = 0; workerid < workers->size(); ++workerid) {
+    // Only send exports to workers and not to drivers.
+    if ((*workers)[workerid].current_task != ROOT_OPERATION) {
+      if (!(*workers)[workerid].exports_added_to_queue) {
+        // Queue up all functions to run on the worker.
+        add_all_functions_to_run_to_worker_queue(workerid);
+        // Queue up all remote functions to be imported on the worker.
+        add_all_remote_functions_to_worker_export_queue(workerid);
+        // Queue up all reusable variables to be imported on the worker.
+        add_all_reusable_variables_to_worker_export_queue(workerid);
+        (*workers)[workerid].exports_added_to_queue = true;
+      }
+    }
+  }
 }
 
 void SchedulerService::add_all_functions_to_run_to_worker_queue(WorkerId workerid) {
