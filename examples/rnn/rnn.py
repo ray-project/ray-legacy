@@ -59,32 +59,32 @@ def net_reinitialization(net_vars):
 
 mono_net_vars = []
 
-@ray.remote([np.ndarray, np.ndarray], [np.ndarray])
+@ray.remote
 def first_layer(x_val, h1_val):
   sess, h1, _, _, _, _, _, x_in, h1_in, _, _, _, _ = ray.reusables.net_vars
   return sess.run(h1, feed_dict={x_in: x_val, h1_in: h1_val})
 
-@ray.remote([np.ndarray, np.ndarray], [np.ndarray])
+@ray.remote
 def second_layer(h1_val, h2_val):
   sess, _, h2, _, _, _, _, _, h1_in, h2_in, _, _, _ = ray.reusables.net_vars
   return sess.run(h2, feed_dict={h1_in: h1_val, h2_in: h2_val})
 
-@ray.remote([np.ndarray, np.ndarray], [np.ndarray])
+@ray.remote
 def third_layer(h2_val, h3_val):
   sess, _, _, h3, _, _, _, _, _, h2_in, h3_in, _, _ = ray.reusables.net_vars
   return sess.run(h3, feed_dict={h2_in: h2_val, h3_in: h3_val})
 
-@ray.remote([np.ndarray, np.ndarray], [np.ndarray])
+@ray.remote
 def fourth_layer(h3_val, h4_val):
   sess, _, _, _, h4, _, _, _, _, _, h3_in, h4_in, _ = ray.reusables.net_vars
   return sess.run(h4, feed_dict={h3_in: h3_val, h4_in: h4_val})
 
-@ray.remote([np.ndarray, np.ndarray], [np.ndarray])
+@ray.remote
 def fifth_layer(h4_val, h5_val):
   sess, _, _, _, _, h5, _, _, _, _, _, h4_in, h5_in = ray.reusables.net_vars
   return sess.run(h5, feed_dict={h4_in: h4_val, h5_in: h5_val})
 
-@ray.remote([np.ndarray], [np.ndarray])
+@ray.remote
 def sixth_layer(h5_val):
   sess, _, _, _, _, _, y, _, _, _, _, _, h5_in = ray.reusables.net_vars
   return sess.run(y, feed_dict={h5_in: h5_val})
