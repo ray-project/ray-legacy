@@ -313,12 +313,15 @@ static PyObject* serialize_task(PyObject* self, PyObject* args) {
   PyObject* worker_capsule;
   Task* task = new Task(); // TODO: to be freed in capsule destructor
   char* name;
-  int len;
+  char* task_uuid;
+  int name_len;
+  int task_uuid_len;
   PyObject* arguments;
-  if (!PyArg_ParseTuple(args, "Os#O", &worker_capsule, &name, &len, &arguments)) {
+  if (!PyArg_ParseTuple(args, "Os#s#O", &worker_capsule, &name, &name_len, &task_uuid, &task_uuid_len, &arguments)) {
     return NULL;
   }
-  task->set_name(std::string(name, len));
+  task->set_name(std::string(name, name_len));
+  task->set_uuid(std::string(task_uuid, task_uuid_len));
   std::vector<ObjectID> objectids; // This is a vector of all the objectids that are serialized in this task, including objectids that are contained in Python objects that are passed by value.
   if (PyList_Check(arguments)) {
     for (size_t i = 0, size = PyList_Size(arguments); i < size; ++i) {
@@ -358,6 +361,7 @@ static PyObject* serialize_task(PyObject* self, PyObject* args) {
 static PyObject* deserialize_task(PyObject* worker_capsule, const Task& task) {
   std::vector<ObjectID> objectids; // This is a vector of all the objectids that were serialized in this task, including objectids that are contained in Python objects that are passed by value.
   PyObject* string = PyString_FromStringAndSize(task.name().c_str(), task.name().size());
+  PyObject* uuid = PyString_FromStringAndSize(task.uuid().c_str(), task.uuid().size());
   int argsize = task.arg_size();
   PyObject* arglist = PyList_New(argsize);
   for (int i = 0; i < argsize; ++i) {
@@ -380,10 +384,11 @@ static PyObject* deserialize_task(PyObject* worker_capsule, const Task& task) {
     result_objectids.push_back(task.result(i));
   }
   worker->decrement_reference_count(result_objectids); // The corresponding increment is done in SubmitTask in the scheduler.
-  PyObject* t = PyTuple_New(3); // We set the items of the tuple using PyTuple_SetItem, because that transfers ownership to the tuple.
+  PyObject* t = PyTuple_New(4); // We set the items of the tuple using PyTuple_SetItem, because that transfers ownership to the tuple.
   PyTuple_SetItem(t, 0, string);
   PyTuple_SetItem(t, 1, arglist);
   PyTuple_SetItem(t, 2, resultlist);
+  PyTuple_SetItem(t, 3, uuid);
   return t;
 }
 

@@ -22,6 +22,9 @@ import services
 import libnumbuf
 import libraylib as raylib
 
+import simplejson as json
+import uuid
+
 contained_objectids = []
 def numbuf_serialize(value):
   """This serializes a value and tracks the object IDs inside the value.
@@ -414,9 +417,11 @@ class Worker(object):
     # Convert all of the argumens to object IDs. It is a little strange that we
     # are calling put, which is external to this class.
     serialized_args = []
+    dependencies = []
     for arg in args:
       if isinstance(arg, raylib.ObjectID):
         next_arg = arg
+        dependencies.append(arg)
       else:
         serialized_arg = serialization.serialize_argument_if_possible(arg)
         if serialized_arg is not None:
@@ -426,8 +431,16 @@ class Worker(object):
           # Put the objet in the object store under the hood.
           next_arg = put(arg)
       serialized_args.append(next_arg)
-    task_capsule = raylib.serialize_task(self.handle, func_name, serialized_args)
+    task_uuid = uuid.uuid4().get_hex()
+    task_capsule = raylib.serialize_task(self.handle, func_name, task_uuid, serialized_args)
     objectids = raylib.submit_task(self.handle, task_capsule)
+    _logger().info(json.dumps({
+      'taskId': task_uuid,
+      'event': 'SCHEDULE',
+      'dependsOn': [arg.id for arg in dependencies],
+      'returns': [obj.id for obj in objectids],
+      'time': time.time()
+      }))
     return objectids
 
   def run_function_on_all_workers(self, function):
@@ -728,12 +741,12 @@ def connect(node_ip_address, scheduler_address, objstore_address=None, worker=gl
     t.daemon = True
     t.start()
   worker.set_mode(mode)
-  FORMAT = "%(asctime)-15s %(message)s"
+  FORMAT = "%(message)s"
   # Configure the Python logging module. Note that if we do not provide our own
   # logger, then our logging will interfere with other Python modules that also
   # use the logging module.
   log_handler = logging.FileHandler(python_log_file_name)
-  log_handler.setLevel(logging.DEBUG)
+  log_handler.setLevel(logging.INFO)
   log_handler.setFormatter(logging.Formatter(FORMAT))
   _logger().addHandler(log_handler)
   _logger().setLevel(logging.DEBUG)
@@ -811,6 +824,10 @@ def get(objectid, worker=global_worker):
   check_connected(worker)
   if worker.mode == raylib.PYTHON_MODE:
     return objectid # In raylib.PYTHON_MODE, ray.get is the identity operation (the input will actually be a value not an objectid)
+  objectids = objectid
+  if not isinstance(objectid, list):
+    objectids = [objectid]
+  _logger().info(json.dumps({'event': 'PHASE_END', 'time': time.time()}))
   if isinstance(objectid, list):
     [raylib.request_object(worker.handle, x) for x in objectid]
     values = [worker.get_object(x) for x in objectid]
@@ -820,6 +837,7 @@ def get(objectid, worker=global_worker):
     return values
   raylib.request_object(worker.handle, objectid)
   value = worker.get_object(objectid)
+  _logger().info(json.dumps({'event': 'PHASE_BEGIN', 'dependsOn': [obj.id for obj in objectids], 'time': time.time()}))
   if isinstance(value, RayTaskError):
     # If the result is a RayTaskError, then the task that created this object
     # failed, and we should propagate the error message here.
@@ -959,13 +977,15 @@ def main_loop(worker=global_worker):
     After the task executes, the worker resets any reusable variables that were
     accessed by the task.
     """
-    function_name, serialized_args, return_objectids = task
+    function_name, serialized_args, return_objectids, task_uuid = task
     try:
       arguments = get_arguments_for_execution(worker.functions[function_name], serialized_args, worker) # get args from objstore
+      _logger().info(json.dumps({'taskId': task_uuid, 'event': 'BEGIN', 'time': time.time()}))
       outputs = worker.functions[function_name].executor(arguments) # execute the function
       if len(return_objectids) == 1:
         outputs = (outputs,)
       store_outputs_in_objstore(return_objectids, outputs, worker) # store output in local object store
+      _logger().info(json.dumps({'taskId': task_uuid, 'event': 'END', 'time': time.time()}))
     except Exception as e:
       # If the task threw an exception, then record the traceback. We determine
       # whether the exception was thrown in the task execution by whether the
@@ -976,7 +996,7 @@ def main_loop(worker=global_worker):
       store_outputs_in_objstore(return_objectids, failure_objects, worker)
       # Notify the scheduler that the task failed.
       raylib.notify_failure(worker.handle, function_name, str(failure_object), raylib.FailedTask)
-      _logger().info("While running function {}, worker threw exception with message: \n\n{}\n".format(function_name, str(failure_object)))
+      _logger().debug("While running function {}, worker threw exception with message: \n\n{}\n".format(function_name, str(failure_object)))
     # Notify the scheduler that the task is done. This happens regardless of
     # whether the task succeeded or failed.
     raylib.ready_for_new_task(worker.handle)
@@ -989,7 +1009,7 @@ def main_loop(worker=global_worker):
       # We record the traceback and notify the scheduler.
       traceback_str = format_error_message(traceback.format_exc())
       raylib.notify_failure(worker.handle, function_name, traceback_str, raylib.FailedReinitializeReusableVariable)
-      _logger().info("While attempting to reinitialize the reusable variables after running function {}, the worker threw exception with message: \n\n{}\n".format(function_name, traceback_str))
+      _logger().debug("While attempting to reinitialize the reusable variables after running function {}, the worker threw exception with message: \n\n{}\n".format(function_name, traceback_str))
 
   def process_remote_function(function_name, serialized_function):
     """Import a remote function."""
@@ -999,7 +1019,7 @@ def main_loop(worker=global_worker):
       # If an exception was thrown when the remote function was imported, we
       # record the traceback and notify the scheduler of the failure.
       traceback_str = format_error_message(traceback.format_exc())
-      _logger().info("Failed to import remote function {}. Failed with message: \n\n{}\n".format(function_name, traceback_str))
+      _logger().debug("Failed to import remote function {}. Failed with message: \n\n{}\n".format(function_name, traceback_str))
       # Notify the scheduler that the remote function failed to import.
       raylib.notify_failure(worker.handle, function_name, traceback_str, raylib.FailedRemoteFunctionImport)
     else:
@@ -1007,7 +1027,7 @@ def main_loop(worker=global_worker):
       function.__module__ = module
       assert function_name == "{}.{}".format(function.__module__, function.__name__), "The remote function name does not match the name that was passed in."
       worker.functions[function_name] = remote(num_return_vals=num_return_vals)(function)
-      _logger().info("Successfully imported remote function {}.".format(function_name))
+      _logger().debug("Successfully imported remote function {}.".format(function_name))
       # Noify the scheduler that the remote function imported successfully.
       # We pass an empty error message string because the import succeeded.
       raylib.register_remote_function(worker.handle, function_name, num_return_vals)
@@ -1022,11 +1042,11 @@ def main_loop(worker=global_worker):
       # If an exception was thrown when the reusable variable was imported, we
       # record the traceback and notify the scheduler of the failure.
       traceback_str = format_error_message(traceback.format_exc())
-      _logger().info("Failed to import reusable variable {}. Failed with message: \n\n{}\n".format(reusable_variable_name, traceback_str))
+      _logger().debug("Failed to import reusable variable {}. Failed with message: \n\n{}\n".format(reusable_variable_name, traceback_str))
       # Notify the scheduler that the reusable variable failed to import.
       raylib.notify_failure(worker.handle, reusable_variable_name, traceback_str, raylib.FailedReusableVariableImport)
     else:
-      _logger().info("Successfully imported reusable variable {}.".format(reusable_variable_name))
+      _logger().debug("Successfully imported reusable variable {}.".format(reusable_variable_name))
 
   def process_function_to_run(serialized_function):
     """Run on arbitrary function on the worker."""
@@ -1039,19 +1059,19 @@ def main_loop(worker=global_worker):
       # If an exception was thrown when the function was run, we record the
       # traceback and notify the scheduler of the failure.
       traceback_str = traceback.format_exc()
-      _logger().info("Failed to run function on worker. Failed with message: \n\n{}\n".format(traceback_str))
+      _logger().debug("Failed to run function on worker. Failed with message: \n\n{}\n".format(traceback_str))
       # Notify the scheduler that running the function failed.
       name = function.__name__  if "function" in locals() and hasattr(function, "__name__") else ""
       raylib.notify_failure(worker.handle, name, traceback_str, raylib.FailedFunctionToRun)
     else:
-      _logger().info("Successfully ran function on worker.")
+      _logger().debug("Successfully ran function on worker.")
 
   while True:
     command, command_args = raylib.wait_for_next_message(worker.handle)
     try:
       if command == "die":
         # We use this as a mechanism to allow the scheduler to kill workers.
-        _logger().info("Received a 'die' command, and will exit now.")
+        _logger().debug("Received a 'die' command, and will exit now.")
         break
       elif command == "task":
         process_task(command_args)
@@ -1065,7 +1085,7 @@ def main_loop(worker=global_worker):
         serialized_function = command_args
         process_function_to_run(serialized_function)
       else:
-        _logger().info("Reached the end of the if-else loop in the main loop. This should be unreachable.")
+        _logger().debug("Reached the end of the if-else loop in the main loop. This should be unreachable.")
         assert False, "This code should be unreachable."
     finally:
       # Allow releasing the variables BEFORE we wait for the next message or exit the block
@@ -1141,11 +1161,11 @@ def remote(*args, **kwargs):
           return objectids
       def func_executor(arguments):
         """This gets run when the remote function is executed."""
-        _logger().info("Calling function {}".format(func.__name__))
+        _logger().debug("Calling function {}".format(func.__name__))
         start_time = time.time()
         result = func(*arguments)
         end_time = time.time()
-        _logger().info("Finished executing function {}, it took {} seconds".format(func.__name__, end_time - start_time))
+        _logger().debug("Finished executing function {}, it took {} seconds".format(func.__name__, end_time - start_time))
         return result
       def func_invoker(*args, **kwargs):
         """This is returned by the decorator and used to invoke the function."""
@@ -1247,13 +1267,13 @@ def get_arguments_for_execution(function, serialized_args, worker=global_worker)
   for (i, arg) in enumerate(serialized_args):
     if isinstance(arg, raylib.ObjectID):
       # get the object from the local object store
-      _logger().info("Getting argument {} for function {}.".format(i, function.__name__))
+      _logger().debug("Getting argument {} for function {}.".format(i, function.__name__))
       argument = worker.get_object(arg)
       if isinstance(argument, RayTaskError):
         # If the result is a RayTaskError, then the task that created this
         # object failed, and we should propagate the error message here.
         raise RayGetArgumentError(function.__name__, i, arg, argument)
-      _logger().info("Successfully retrieved argument {} for function {}.".format(i, function.__name__))
+      _logger().debug("Successfully retrieved argument {} for function {}.".format(i, function.__name__))
     else:
       # pass the argument by value
       argument = serialization.deserialize_argument(arg)
