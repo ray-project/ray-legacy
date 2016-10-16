@@ -4,16 +4,28 @@ language: generic
 
 matrix:
   include:
-    - os: linux
-      dist: trusty
+#    - os: linux
+#      dist: trusty
+#      python: "2.7"
+#    - os: linux
+#      dist: trusty
+#      python: "3.5"
     - os: osx
       osx_image: xcode7
+      python: "2.7"
+    - os: osx
+      osx_image: xcode7
+      python: "3.5"
 
 services:
   - docker
 
 install:
+  - sudo easy_install pip
+  - sudo pip install numpy funcsigs protobuf colorama graphviz redis --ignore-installed six
+  - sudo pip install --upgrade git+git://github.com/cloudpipe/cloudpickle.git@0d225a4695f1f65ae1cbb2e0bbc145e10167cce4
   - ./test/travis-ci/install.sh
+  - source setup-env.sh
 
 script:
   - ./test/travis-ci/run_test.sh --docker-image=ray-project/ray:test-base 'source setup-env.sh && cd test && python runtest.py'

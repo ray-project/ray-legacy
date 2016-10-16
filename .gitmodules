@@ -1,7 +1,9 @@
-[submodule "thirdparty/grpc"]
-	path = thirdparty/grpc
-	url = https://github.com/grpc/grpc
-	ignore = dirty
+[submodule "thirdparty/plasma"]
+	path = thirdparty/plasma
+	url = https://github.com/ray-project/plasma.git
+[submodule "thirdparty/photon"]
+	path = thirdparty/photon
+	url = https://github.com/ray-project/photon.git
 [submodule "thirdparty/numbuf"]
 	path = thirdparty/numbuf
 	url = https://github.com/ray-project/numbuf.git
@@ -12,6 +14,3 @@
 	path = thirdparty/python
 	url = https://github.com/austinsc/python.git
 	ignore = dirty
-[submodule "thirdparty/hiredis"]
-	path = thirdparty/hiredis
-	url = https://github.com/redis/hiredis.git

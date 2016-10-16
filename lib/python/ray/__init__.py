@@ -11,8 +11,7 @@ if hasattr(ctypes, "windll"):
 
 import config
 import serialization
-from worker import scheduler_info, register_class, visualize_computation_graph, task_info, init, connect, disconnect, get, put, wait, remote, kill_workers, restart_workers_local
+from worker import scheduler_info, register_class, visualize_computation_graph, task_info, init, connect, disconnect, get, put, wait, remote
 from worker import Reusable, reusables
-from libraylib import SCRIPT_MODE, WORKER_MODE, PYTHON_MODE, SILENT_MODE
-from libraylib import ObjectID
+from worker import SILENT_MODE, WORKER_MODE, PYTHON_MODE, SCRIPT_MODE
 import internal

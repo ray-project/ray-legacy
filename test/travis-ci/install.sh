@@ -24,5 +24,12 @@ else
   # Mac OS X test
   ./install-dependencies.sh
   ./setup.sh
-  ./build.sh
+
+  cd thirdparty/photon/lib/python
+  sudo python setup.py install
+  cd ../../../..
+
+  cd lib/python
+  sudo python setup.py install
+  cd ../..
 fi

@@ -164,14 +164,6 @@ def dot(a, b):
 
 @ray.remote
 def subblocks(a, *ranges):
-  """
-  This function produces a distributed array from a subset of the blocks in the `a`. The result and `a` will have the same number of dimensions.For example,
-      subblocks(a, [0, 1], [2, 4])
-  will produce a DistArray whose objectids are
-      [[a.objectids[0, 2], a.objectids[0, 4]],
-       [a.objectids[1, 2], a.objectids[1, 4]]]
-  We allow the user to pass in an empty list [] to indicate the full range.
-  """
   ranges = list(ranges)
   if len(ranges) != a.ndim:
     raise Exception("sub_blocks expects to receive a number of ranges equal to a.ndim, but it received {} ranges and a.ndim = {}.".format(len(ranges), a.ndim))

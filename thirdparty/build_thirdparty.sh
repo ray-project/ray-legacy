@@ -18,6 +18,31 @@ else
   exit 1
 fi
 
+echo "building photon"
+cd $TP_DIR/photon
+# Build the common submodule first.
+cd common
+make
+make test
+#cd lib/python
+#sudo python setup.py install
+#cd ../../..
+cd ..
+# Now build photon.
+make
+#cd lib/python
+#sudo python setup.py install
+# Copy executables to lib/python/ray.
+cp $TP_DIR/photon/common/thirdparty/redis-3.2.3/src/redis-server  $TP_DIR/../lib/python/ray/
+cp $TP_DIR/photon/build/photon_scheduler $TP_DIR/../lib/python/ray/
+
+echo "building plasma"
+cd $TP_DIR/plasma
+make
+# Copy executables to lib/python/ray.
+cp $TP_DIR/plasma/build/plasma_store  $TP_DIR/../lib/python/ray/
+cp $TP_DIR/plasma/build/plasma_manager  $TP_DIR/../lib/python/ray/
+
 echo "building arrow"
 cd $TP_DIR/arrow/cpp
 source setup_build_env.sh
@@ -32,11 +57,3 @@ mkdir -p build
 cd $TP_DIR/numbuf/build
 cmake ..
 make VERBOSE=1 -j$PARALLEL
-
-echo "building GRPC"
-cd $TP_DIR/grpc
-make static HAS_SYSTEM_PROTOBUF=false HAS_SYSTEM_ZLIB=false HAS_SYSTEM_OPENSSL_ALPN=false HAS_SYSTEM_OPENSSL_NPN=false -j$PARALLEL
-
-echo "building hiredis"
-cd $TP_DIR/hiredis
-make
