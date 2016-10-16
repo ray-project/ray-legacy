@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import unittest
 import ray
 import numpy as np
@@ -313,7 +315,7 @@ class APITest(unittest.TestCase):
     ray.worker.cleanup()
 
   def testDefiningRemoteFunctions(self):
-    print ray.init(start_ray_local=True, num_workers=3)
+    ray.init(start_ray_local=True, num_workers=3)
 
     # Test that we can define a remote function in the shell.
     @ray.remote

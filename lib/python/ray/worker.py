@@ -677,11 +677,22 @@ def visualize_computation_graph(file_path=None, view=False, worker=global_worker
   print("Wrote graph protocol buffer description to file {}".format(proto_path))
   print("Wrote computation graph to file {}.pdf".format(base_path))
 
-def task_info(worker=global_worker):
+def error_info(worker=global_worker):
   """Return information about failed tasks."""
-  raise Exception("TASK INFO NOT IMPLEMENTED")
   check_connected(worker)
-  return raylib.task_info(worker.handle)
+  result = {"TaskError": [],
+            "RemoteFunctionImportError": [],
+            "ReusableVariableImportError": [],
+            "ReusableVariableReinitializeError": [],
+            "FunctionToRunError": []
+            }
+  error_keys = worker.redis_client.lrange("ErrorKeys", 0, -1)
+  for error_key in error_keys:
+    error_type = error_key.split(":", 1)[0]
+    error_contents = worker.redis_client.hgetall(error_key)
+    result[error_type].append(error_contents)
+
+  return result
 
 def initialize_numbuf(worker=global_worker):
   """Initialize the serialization library.
@@ -789,14 +800,15 @@ def print_error_messages(worker):
   worker.pubsub_client = worker.redis_client.pubsub()
   # Exports that are published after the call to pubsub_client.psubscribe and
   # before the call to pubsub_client.listen will still be processed in the loop.
-  worker.pubsub_client.psubscribe("__keyspace@0__:Errors")
+  worker.pubsub_client.psubscribe("__keyspace@0__:ErrorKeys")
   num_errors_printed = 0
 
   # Get the exports that occurred before the call to psubscribe.
   try:
     worker.lock.acquire()
-    error_messages = worker.redis_client.lrange("Errors", 0, -1)
-    for error_message in error_messages:
+    error_keys = worker.redis_client.lrange("ErrorKeys", 0, -1)
+    for error_key in error_keys:
+      error_message = worker.redis_client.hget(error_key, "message")
       print(error_message)
       num_errors_printed += 1
   finally:
@@ -806,7 +818,8 @@ def print_error_messages(worker):
     for msg in worker.pubsub_client.listen():
       try:
         worker.lock.acquire()
-        for error_message in worker.redis_client.lrange("Errors", num_errors_printed, -1):
+        for error_key in worker.redis_client.lrange("ErrorKeys", num_errors_printed, -1):
+          error_message = worker.redis_client.hget(error_key, "message")
           print(error_message)
           num_errors_printed += 1
       finally:
@@ -827,8 +840,12 @@ def fetch_and_process_remote_function(key, worker=global_worker):
     # If an exception was thrown when the remote function was imported, we
     # record the traceback and notify the scheduler of the failure.
     traceback_str = format_error_message(traceback.format_exc())
-    # Notify the scheduler that the remote function failed to import.
-    worker.redis_client.rpush("Errors", traceback_str)
+    # Log the error message.
+    error_key = "RemoteFunctionImportError:{}".format(function_id.id())
+    worker.redis_client.hmset(error_key, {"function_id": function_id.id(),
+                                          "function_name": function_name,
+                                          "message": traceback_str})
+    worker.redis_client.rpush("ErrorKeys", error_key)
   else:
     # TODO(rkn): Why is the below line necessary?
     function.__module__ = module
@@ -853,8 +870,13 @@ def fetch_and_process_reusable_variable(key, worker=global_worker):
     # If an exception was thrown when the reusable variable was imported, we
     # record the traceback and notify the scheduler of the failure.
     traceback_str = format_error_message(traceback.format_exc())
-    # Notify the scheduler that the reusable variable failed to import.
-    worker.redis_client.rpush("Errors", traceback_str)
+    # Log the error message.
+    error_key = "ReusableVariableImportError:{}".format("".join([chr(random.randint(0, 255)) for _ in range(20)]))
+    worker.redis_client.hmset(error_key, {"name": reusable_variable_name,
+                                          "message": traceback_str})
+    worker.redis_client.rpush("ErrorKeys", error_key)
+
+
   else:
     pass
 
@@ -870,9 +892,13 @@ def fetch_and_process_function_to_run(key, worker=global_worker):
     # If an exception was thrown when the function was run, we record the
     # traceback and notify the scheduler of the failure.
     traceback_str = traceback.format_exc()
-    # Notify the scheduler that running the function failed.
+    # Log the error message.
     name = function.__name__  if "function" in locals() and hasattr(function, "__name__") else ""
-    worker.redis_client.rpush("Errors", traceback_str)
+    error_key = "FunctionToRunError:{}".format("".join([chr(random.randint(0, 255)) for _ in range(20)]))
+    worker.redis_client.hmset(error_key, {"name": name,
+                                          "message": traceback_str})
+    worker.redis_client.rpush("ErrorKeys", error_key)
+
   else:
     pass
 
@@ -959,14 +985,14 @@ def connect(node_ip_address, redis_address, object_store_name, object_store_mana
   worker.photon_client = photon.PhotonClient(local_scheduler_name)
 
   # Register the worker with Redis.
-  if mode == SCRIPT_MODE:
+  if mode in [SCRIPT_MODE, SILENT_MODE]:
     worker.redis_client.rpush("Drivers", worker.worker_id)
-  elif mode in [WORKER_MODE, SILENT_MODE]:
+  elif mode == WORKER_MODE:
     worker.redis_client.rpush("Workers", worker.worker_id)
   else:
     raise Exception("This code should be unreachable.")
 
-  if mode in [WORKER_MODE, SILENT_MODE]:
+  if mode == WORKER_MODE:
     t = threading.Thread(target=import_thread, args=(worker,))
     # Making the thread a daemon causes it to exit when the main thread exits.
     t.daemon = True
@@ -1196,8 +1222,14 @@ def main_loop(worker=global_worker):
       failure_object = RayTaskError(function_name, e, traceback_str)
       failure_objects = [failure_object for _ in range(len(return_object_ids))]
       store_outputs_in_objstore(return_object_ids, failure_objects, worker)
-      # Notify the scheduler that the task failed.
-      worker.redis_client.rpush("Errors", str(failure_object))
+      # Log the error message.
+      error_key = "TaskError:{}".format("".join([chr(random.randint(0, 255)) for _ in range(20)]))
+      worker.redis_client.hmset(error_key, {"task_instance_id": "NOTIMPLEMENTED",
+                                            "task_id": "NOTIMPLEMENTED",
+                                            "function_id": function_id.id(),
+                                            "function_name": function_name,
+                                            "message": traceback_str})
+      worker.redis_client.rpush("ErrorKeys", error_key)
     # Notify the scheduler that the task is done. This happens regardless of
     # whether the task succeeded or failed.
     worker.redis_client.publish("ReadyForNewTask", worker.worker_id)
@@ -1209,7 +1241,13 @@ def main_loop(worker=global_worker):
       # The attempt to reinitialize the reusable variables threw an exception.
       # We record the traceback and notify the scheduler.
       traceback_str = format_error_message(traceback.format_exc())
-      worker.redis_client.rpush("Errors", traceback_str)
+      error_key = "ReusableVariableReinitializeError:{}".format("".join([chr(random.randint(0, 255)) for _ in range(20)]))
+      worker.redis_client.hmset(error_key, {"task_instance_id": "NOTIMPLEMENTED",
+                                            "task_id": "NOTIMPLEMENTED",
+                                            "function_id": function_id.id(),
+                                            "function_name": function_name,
+                                            "message": traceback_str})
+      worker.redis_client.rpush("ErrorKeys", error_key)
 
   num_tasks = 0
 
@@ -1433,13 +1471,7 @@ def remote(*args, **kwargs):
       num_return_vals = kwargs["num_return_vals"]
       function_id = kwargs["function_id"]
       return make_remote_decorator(num_return_vals, function_id)
-    else:
-      # Don't do anything in this setting because this remote function was
-      # imported unintentionally (probably while unpickling a different remote
-      # function).
-      # TODO(rkn): What to do here?
-      #return
-      pass
+
   if len(args) == 1 and len(kwargs) == 0 and callable(args[0]):
     # This is the case where the decorator is just @ray.remote.
     num_return_vals = 1
