@@ -858,6 +858,7 @@ def put(value, worker=global_worker):
     return value # In raylib.PYTHON_MODE, ray.put is the identity operation
   objectid = raylib.get_objectid(worker.handle)
   worker.put_object(objectid, value)
+  _logger().info(json.dumps({'event': 'PUT', 'objectId': objectid.id, 'time': time.time()}))
   return objectid
 
 def wait(objectids, num_returns=1, timeout=None, worker=global_worker):
@@ -985,7 +986,12 @@ def main_loop(worker=global_worker):
       if len(return_objectids) == 1:
         outputs = (outputs,)
       store_outputs_in_objstore(return_objectids, outputs, worker) # store output in local object store
-      _logger().info(json.dumps({'taskId': task_uuid, 'event': 'END', 'time': time.time()}))
+      _logger().info(json.dumps({
+          'taskId': task_uuid,
+          'event': 'END',
+          'time': time.time(),
+          'results': [return_obj.id for return_obj in return_objectids]
+          }))
     except Exception as e:
       # If the task threw an exception, then record the traceback. We determine
       # whether the exception was thrown in the task execution by whether the
@@ -997,6 +1003,7 @@ def main_loop(worker=global_worker):
       # Notify the scheduler that the task failed.
       raylib.notify_failure(worker.handle, function_name, str(failure_object), raylib.FailedTask)
       _logger().debug("While running function {}, worker threw exception with message: \n\n{}\n".format(function_name, str(failure_object)))
+      _logger().info(json.dumps({'taskId': task_uuid, 'event': 'EXCEPTION', 'time': time.time(), 'results': []}))
     # Notify the scheduler that the task is done. This happens regardless of
     # whether the task succeeded or failed.
     raylib.ready_for_new_task(worker.handle)
