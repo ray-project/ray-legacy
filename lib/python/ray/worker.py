@@ -990,7 +990,10 @@ def main_loop(worker=global_worker):
           'taskId': task_uuid,
           'event': 'END',
           'time': time.time(),
-          'results': [return_obj.id for return_obj in return_objectids]
+          'results': [{
+              'objectId': return_obj.id,
+              'size': sys.getsizeof(output, 0),
+              } for return_obj, output in zip(return_objectids, outputs)]
           }))
     except Exception as e:
       # If the task threw an exception, then record the traceback. We determine
