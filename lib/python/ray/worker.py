@@ -751,6 +751,8 @@ def connect(node_ip_address, scheduler_address, objstore_address=None, worker=gl
   _logger().addHandler(log_handler)
   _logger().setLevel(logging.DEBUG)
   _logger().propagate = False
+  if mode != raylib.WORKER_MODE:
+      _logger().info(json.dumps({'event': 'DRIVER_BEGIN', 'time': time.time()}))
   if mode in [raylib.SCRIPT_MODE, raylib.SILENT_MODE]:
     # Add the directory containing the script that is running to the Python
     # paths of the workers. Also add the current directory. Note that this
