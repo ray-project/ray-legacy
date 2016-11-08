@@ -657,6 +657,7 @@ def cleanup(worker=global_worker):
   services.cleanup() in the tests because we need to start and stop many
   clusters in the tests, but the import and exit only happen once.
   """
+  _logger().info(json.dumps({'event': 'DRIVER_END', 'time': time.time()}))
   disconnect(worker)
   worker.set_mode(None)
   services.cleanup()
@@ -751,8 +752,6 @@ def connect(node_ip_address, scheduler_address, objstore_address=None, worker=gl
   _logger().addHandler(log_handler)
   _logger().setLevel(logging.DEBUG)
   _logger().propagate = False
-  if mode != raylib.WORKER_MODE:
-      _logger().info(json.dumps({'event': 'DRIVER_BEGIN', 'time': time.time()}))
   if mode in [raylib.SCRIPT_MODE, raylib.SILENT_MODE]:
     # Add the directory containing the script that is running to the Python
     # paths of the workers. Also add the current directory. Note that this
@@ -772,6 +771,8 @@ def connect(node_ip_address, scheduler_address, objstore_address=None, worker=gl
   initialize_numbuf()
   worker.cached_remote_functions = None
   reusables._cached_reusables = None
+  if mode != raylib.WORKER_MODE:
+      _logger().info(json.dumps({'event': 'DRIVER_BEGIN', 'time': time.time()}))
 
 def disconnect(worker=global_worker):
   """Disconnect this worker from the scheduler and object store."""
