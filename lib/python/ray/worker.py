@@ -861,7 +861,12 @@ def put(value, worker=global_worker):
     return value # In raylib.PYTHON_MODE, ray.put is the identity operation
   objectid = raylib.get_objectid(worker.handle)
   worker.put_object(objectid, value)
-  _logger().info(json.dumps({'event': 'PUT', 'objectId': objectid.id, 'time': time.time()}))
+  _logger().info(json.dumps({
+      'event': 'PUT',
+      'objectId': objectid.id,
+      'size': sys.getsizeof(value, 0),
+      'time': time.time()
+      }))
   return objectid
 
 def wait(objectids, num_returns=1, timeout=None, worker=global_worker):
