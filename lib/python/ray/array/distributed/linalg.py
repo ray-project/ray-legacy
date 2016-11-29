@@ -7,7 +7,7 @@ from core import *
 __all__ = ["tsqr", "modified_lu", "tsqr_hr", "qr"]
 
 @ray.remote(num_return_vals=2)
-def tsqr(a):
+def tsqr(a, block_size=BLOCK_SIZE):
   """
   arguments:
     a: a distributed matrix
@@ -53,9 +53,9 @@ def tsqr(a):
     q_shape = a.shape
   else:
     q_shape = [a.shape[0], a.shape[0]]
-  q_num_blocks = DistArray.compute_num_blocks(q_shape)
+  q_num_blocks = DistArray.compute_num_blocks(q_shape, block_size)
   q_objectids = np.empty(q_num_blocks, dtype=object)
-  q_result = DistArray(q_shape, q_objectids)
+  q_result = DistArray(q_shape, block_size=block_size, objectids=q_objectids)
 
   # reconstruct output
   for i in range(num_blocks):
@@ -64,10 +64,10 @@ def tsqr(a):
     for j in range(1, K):
       if np.mod(ith_index, 2) == 0:
         lower = [0, 0]
-        upper = [a.shape[1], BLOCK_SIZE]
+        upper = [a.shape[1], block_size]
       else:
         lower = [a.shape[1], 0]
-        upper = [2 * a.shape[1], BLOCK_SIZE]
+        upper = [2 * a.shape[1], block_size]
       ith_index /= 2
       q_block_current = ra.dot.remote(q_block_current, ra.subarray.remote(q_tree[ith_index, j], lower, upper))
     q_result.objectids[i] = q_block_current
@@ -142,11 +142,12 @@ def qr(a):
   k = min(m, n)
 
   # we will store our scratch work in a_work
-  a_work = DistArray(a.shape, np.copy(a.objectids))
+  a_work = DistArray(a.shape, block_size=a.block_size,
+          objectids=np.copy(a.objectids))
 
   result_dtype = np.linalg.qr(ray.get(a.objectids[0, 0]))[0].dtype.name
-  r_res = ray.get(zeros.remote([k, n], result_dtype)) # TODO(rkn): It would be preferable not to get this right after creating it.
-  y_res = ray.get(zeros.remote([m, k], result_dtype)) # TODO(rkn): It would be preferable not to get this right after creating it.
+  r_res = ray.get(zeros.remote([k, n], block_size=a.block_size, dtype=result_dtype)) # TODO(rkn): It would be preferable not to get this right after creating it.
+  y_res = ray.get(zeros.remote([m, k], block_size=a.block_size, dtype=result_dtype)) # TODO(rkn): It would be preferable not to get this right after creating it.
   Ts = []
 
   for i in range(min(a.num_blocks[0], a.num_blocks[1])): # this differs from the paper, which says "for i in range(a.num_blocks[1])", but that doesn't seem to make any sense when a.num_blocks[1] > a.num_blocks[0]

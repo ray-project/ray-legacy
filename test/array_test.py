@@ -51,7 +51,7 @@ class DistributedArrayTest(unittest.TestCase):
 
     a = ra.ones.remote([da.BLOCK_SIZE, da.BLOCK_SIZE])
     b = ra.zeros.remote([da.BLOCK_SIZE, da.BLOCK_SIZE])
-    x = da.DistArray([2 * da.BLOCK_SIZE, da.BLOCK_SIZE], np.array([[a], [b]]))
+    x = da.DistArray([2 * da.BLOCK_SIZE, da.BLOCK_SIZE], objectids=np.array([[a], [b]]))
     assert_equal(x.assemble(), np.vstack([np.ones([da.BLOCK_SIZE, da.BLOCK_SIZE]), np.zeros([da.BLOCK_SIZE, da.BLOCK_SIZE])]))
 
     ray.worker.cleanup()
@@ -62,7 +62,7 @@ class DistributedArrayTest(unittest.TestCase):
     ray.init(start_ray_local=True, num_objstores=2, num_workers=10)
     ray.register_class(da.DistArray)
 
-    x = da.zeros.remote([9, 25, 51], "float")
+    x = da.zeros.remote([9, 25, 51], dtype_name="float")
     assert_equal(ray.get(da.assemble.remote(x)), np.zeros([9, 25, 51]))
 
     x = da.ones.remote([11, 25, 49], dtype_name="float")
