@@ -831,21 +831,22 @@ def get(objectid, worker=global_worker):
   if not isinstance(objectid, list):
     objectids = [objectid]
   _logger().info(json.dumps({'event': 'PHASE_END', 'time': time.time()}))
-  if isinstance(objectid, list):
-    [raylib.request_object(worker.handle, x) for x in objectid]
-    values = [worker.get_object(x) for x in objectid]
-    for i, value in enumerate(values):
-      if isinstance(value, RayTaskError):
-        raise RayGetError(objectid[i], value)
-    return values
-  raylib.request_object(worker.handle, objectid)
-  value = worker.get_object(objectid)
-  _logger().info(json.dumps({'event': 'PHASE_BEGIN', 'dependsOn': [obj.id for obj in objectids], 'time': time.time()}))
-  if isinstance(value, RayTaskError):
+  [raylib.request_object(worker.handle, x) for x in objectids]
+  values = [worker.get_object(x) for x in objectids]
+  for i, value in enumerate(values):
     # If the result is a RayTaskError, then the task that created this object
     # failed, and we should propagate the error message here.
-    raise RayGetError(objectid, value)
-  return value
+    if isinstance(value, RayTaskError):
+      raise RayGetError(objectids[i], value)
+  _logger().info(json.dumps({
+    'event': 'PHASE_BEGIN',
+    'dependsOn': [obj.id for obj in objectids],
+    'time': time.time()
+    }))
+  if isinstance(objectid, list):
+      return values
+  else:
+      return values[0]
 
 def put(value, worker=global_worker):
   """Store an object in the object store.
