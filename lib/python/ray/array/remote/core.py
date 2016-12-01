@@ -1,7 +1,9 @@
 import numpy as np
 import ray
 
-__all__ = ["zeros", "zeros_like", "ones", "eye", "dot", "vstack", "hstack", "subarray", "copy", "tril", "triu", "diag", "transpose", "add", "subtract", "sum", "shape", "sum_list"]
+__all__ = ["zeros", "zeros_like", "ones", "random", "eye", "dot", "vstack",
+    "hstack", "subarray", "copy", "tril", "triu", "diag", "transpose", "add",
+    "subtract", "sum", "shape", "sum_list"]
 
 @ray.remote
 def zeros(shape, dtype_name="float", order="C"):
@@ -15,6 +17,11 @@ def zeros_like(a, dtype_name="None", order="K", subok=True):
 @ray.remote
 def ones(shape, dtype_name="float", order="C"):
   return np.ones(shape, dtype=np.dtype(dtype_name), order=order)
+
+@ray.remote
+def random(shape):
+  assert(len(shape) == 2)
+  return np.random.rand(shape[0], shape[1])
 
 @ray.remote
 def eye(N, M=-1, k=0, dtype_name="float"):

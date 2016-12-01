@@ -2,8 +2,9 @@ import numpy as np
 import ray.array.remote as ra
 import ray
 
-__all__ = ["BLOCK_SIZE", "DistArray", "assemble", "zeros", "ones", "copy",
-           "eye", "triu", "tril", "blockwise_dot", "dot", "transpose", "add", "subtract", "numpy_to_dist", "subblocks"]
+__all__ = ["BLOCK_SIZE", "DistArray", "assemble", "zeros", "ones", "random",
+           "copy", "eye", "triu", "tril", "blockwise_dot", "dot", "transpose",
+           "add", "subtract", "numpy_to_dist", "subblocks"]
 
 BLOCK_SIZE = 10
 
@@ -84,6 +85,13 @@ def ones(shape, block_size=BLOCK_SIZE, dtype_name="float"):
   result = DistArray(shape, block_size)
   for index in np.ndindex(*result.num_blocks):
     result.objectids[index] = ra.ones.remote(DistArray.compute_block_shape(index, shape, block_size), dtype_name=dtype_name)
+  return result
+
+@ray.remote
+def random(shape, block_size=BLOCK_SIZE):
+  result = DistArray(shape, block_size)
+  for index in np.ndindex(*result.num_blocks):
+    result.objectids[index] = ra.random.remote(DistArray.compute_block_shape(index, shape, block_size))
   return result
 
 @ray.remote
